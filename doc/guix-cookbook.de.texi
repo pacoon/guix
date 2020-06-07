@@ -1,0 +1,2340 @@
+\input texinfo
+@c ===========================================================================
+@c
+@c This file was generated with po4a. Translate the source file.
+@c
+@c ===========================================================================
+@c -*-texinfo-*-
+
+@c %**start of header
+@setfilename guix-cookbook.de.info
+@documentencoding UTF-8
+@documentlanguage de
+@frenchspacing on
+@settitle GNU-Guix-Kochbuch
+@c %**end of header
+
+@copying
+Copyright @copyright{} 2019 Ricardo Wurmus@* Copyright @copyright{} 2019
+Efraim Flashner@* Copyright @copyright{} 2019 Pierre Neidhardt@* Copyright
+@copyright{} 2020 Oleg Pykhalov@* Copyright @copyright{} 2020 Matthew
+Brooks@* Copyright @copyright{} 2020 Marcin Karpezo@*
+
+Es ist Ihnen gestattet, dieses Dokument zu vervielfältigen, weiterzugeben
+und/oder zu verändern, unter den Bedingungen der GNU Free Documentation
+License, entweder gemäß Version 1.3 der Lizenz oder (nach Ihrer Option)
+einer späteren Version, die von der Free Software Foundation veröffentlicht
+wurde, ohne unveränderliche Abschnitte, ohne vorderen Umschlagtext und ohne
+hinteren Umschlagtext. Eine Kopie der Lizenz finden Sie im Abschnitt mit dem
+Titel „GNU Free Documentation License“.
+@end copying
+
+@dircategory Systemadministration
+@direntry
+* Guix-Kochbuch: (guix-cookbook.de).  Anleitungen und Beispiele für GNU 
+                                        Guix.
+@end direntry
+
+@titlepage
+@title GNU-Guix-Kochbuch
+@subtitle Anleitungen und Beispiele, wie man den funktionalen Paketmanager GNU Guix benutzt
+@author Die Entwickler von GNU Guix
+
+@page
+@vskip 0pt plus 1filll
+
+@insertcopying
+@end titlepage
+
+@contents
+
+@c *********************************************************************
+@node Top
+@top GNU-Guix-Kochbuch
+
+Dieses Dokument stellt Anleitungen und detaillierte Beispiele vor, wie man
+GNU@tie{}Guix benutzt, ein Werkzeug zur funktionalen Paketverwaltung, das
+für das GNU-System geschrieben wurde. Bitte lesen Sie Details zum System,
+seinen Programmierschnittstellen und ähnlichen Konzepten im @ref{Top,,,
+guix.de, Referenzhandbuch zu GNU Guix} nach.
+
+@c TRANSLATORS: You can replace the following paragraph with information on
+@c how to join your own translation team and how to report issues with the
+@c translation.
+Wenn Sie dieses Dokument in Ihre eigene Sprache übersetzen möchten, dann
+sind Sie beim
+@uref{https://translationproject.org/domain/guix-cookbook.html, Translation
+Project} herzlich willkommen.
+
+@menu
+* Anleitungen zu Scheme::    Lernen Sie Ihre neue Lieblingssprache kennen!
+* Paketerstellung::          Anleitungen, wie man Pakete erstellt.
+* Systemkonfiguration::      Das GNU-System anpassen.
+* Fortgeschrittene Paketverwaltung::  Alle Macht den Nutzern!
+
+* Danksagungen::             Danke!
+* GNU-Lizenz für freie Dokumentation::  Die Lizenz dieses Dokuments.
+* Konzeptverzeichnis::       Konzepte.
+
+@detailmenu
+ --- Detaillierte Liste der Knoten ---
+
+
+
+Anleitungen zu Scheme
+
+
+
+* Ein Schnellkurs in Scheme::  Die Grundzüge von Scheme erlernen.
+
+Paketerstellung
+
+
+
+* Anleitung zum Paketeschreiben::  Lasst uns ein Paket zu Guix beitragen!
+
+Systemkonfiguration
+
+
+
+* Den Kernel anpassen::      Einen eigenen Linux-Kernel benutzen
+
+
+
+@end detailmenu
+@end menu
+
+@c *********************************************************************
+@node Anleitungen zu Scheme
+@chapter Anleitungen zu Scheme
+
+GNU@tie{}Guix ist in Scheme geschrieben, einer für alle Anwendungszwecke
+geeigneten Programmiersprache, und viele Funktionalitäten von Guix können
+programmatisch angesteuert und verändert werden. Sie können Scheme benutzen,
+um Paketdefinitionen zu erzeugen, abzuändern, ganze Betriebssysteme
+einzuspielen etc.
+
+Wenn man die Grundzüge kennt, wie man in Scheme programmiert, bekommt man
+Zugang zu vielen der fortgeschrittenen Funktionen von Guix — und Sie müssen
+dazu nicht einmal ein erfahrener Programmierer sein!
+
+Legen wir los!
+
+@node Ein Schnellkurs in Scheme
+@section Ein Schnellkurs in Scheme
+
+@cindex Scheme, Schnellkurs
+
+Die von Guix benutzte Scheme-Implementierung nennt sich Guile. Um mit der
+Sprache herumspielen zu können, installieren Sie Guile mit @code{guix
+install guile} und starten eine interaktive Programmierumgebung (englisch
+@uref{https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop,
+REPL}), indem Sie @code{guile} auf der Befehlszeile ausführen.
+
+Alternativ können Sie auch den Befehl @code{guix environment --ad-hoc guile
+-- guile} ausführen, wenn Sie Guile lieber @emph{nicht} in Ihr Nutzerprofil
+installieren wollen.
+
+In den folgenden Beispielen stehen die Zeilen dafür, was Sie auf der REPL
+eintippen; wenn eine Zeile mit „@result{}“ beginnt, zeigt sie das Ergebnis
+einer Auswertung, während Zeilen, die mit „@print{}“ beginnen, für eine
+angezeigte Ausgabe stehen. Siehe @ref{Using Guile Interactively,,, guile,
+GNU Guile Reference Manual} für mehr Details zur REPL.
+
+@itemize
+@item
+Die Scheme-Syntax ist an sich ein Baum von Ausdrücken (Lisp-Programmierer
+nennen sie @emph{symbolische Ausdrücke}, kurz @emph{S-Ausdrücke} bzw.@:
+englisch @emph{s-expression}). Ein solcher Ausdruck kann ein Literal sein,
+wie z.B.@: Zahlen oder Zeichenketten, oder er kann ein zusammengesetzter
+Ausdruck sein, d.h.@: eine geklammerte Liste von zusammengesetzten und
+literalen Ausdrücken. Dabei stehen @code{#t} und @code{#f} jeweils für die
+Booleschen Werte „wahr“ und „falsch“.
+
+Beispiele für gültige Ausdrücke
+
+@lisp
+"Hallo Welt!"
+@result{} "Hallo Welt!"
+
+17
+@result{} 17
+
+(display (string-append "Hallo " "Guix" "\n"))
+@print{} Hallo Guix!
+@result{} #<unspecified>
+@end lisp
+
+@item
+Das letzte Beispiel eben ist der Aufruf einer Funktion innerhalb eines
+anderen Funktionsaufrufs. Wenn ein geklammerter Ausdruck ausgewertet wird,
+ist der erste Term die Funktion und der Rest sind die Argumente, die an die
+Funktion übergeben werden. Jede Funktion liefert ihren zuletzt ausgewerteten
+Ausdruck als ihren Rückgabewert.
+
+@item
+Anonyme Funktionen werden mit dem @code{lambda}-Term deklariert:
+
+@lisp
+(lambda (x) (* x x))
+@result{} #<procedure 120e348 at <unknown port>:24:0 (x)>
+@end lisp
+
+Die obige Prozedur liefert das Quadrat ihres Arguments. Weil alles ein
+Ausdruck ist, liefert der Ausdruck @code{lambda} eine anonyme Prozedur, die
+wiederum auf ein Argument angewandt werden kann:
+
+@lisp
+((lambda (x) (* x x)) 3)
+@result{} 9
+@end lisp
+
+@item
+Allem kann mit @code{define} ein globaler Name zugewiesen werden:
+
+@lisp
+(define a 3)
+(define quadrat (lambda (x) (* x x)))
+(quadrat a)
+@result{} 9
+@end lisp
+
+@item
+Prozeduren können auch kürzer mit der folgenden Syntax definiert werden:
+
+@lisp
+(define (quadrat x) (* x x))
+@end lisp
+
+@item
+Eine Listenstruktur kann mit der @code{list}-Prozedur erzeugt werden:
+
+@lisp
+(list 2 a 5 7)
+@result{} (2 3 5 7)
+@end lisp
+
+@item
+Mit dem @dfn{quote}-Zeichen wird das Auswerten eines geklammerten Ausdrucks
+abgeschaltet: Der erste Term wird @emph{nicht} auf den anderen Termen
+aufgerufen (siehe @ref{Expression Syntax, quote,, guile, GNU Guile Reference
+Manual}). Folglich liefert es quasi eine Liste von Termen.
+
+@lisp
+'(display (string-append "Hello " "Guix" "\n"))
+@result{} (display (string-append "Hello " "Guix" "\n"))
+
+'(2 a 5 7)
+@result{} (2 a 5 7)
+@end lisp
+
+@item
+Mit einem @dfn{quasiquote}-Zeichen wird die Auswertung eines geklammerten
+Ausdrucks so lange abgeschaltet, bis ein @dfn{unquote} (ein Komma) sie
+wieder aktiviert. Wir können damit genau steuern, was ausgewertet wird und
+was nicht.
+
+@lisp
+`(2 a 5 7 (2 ,a 5 ,(+ a 4)))
+@result{} (2 a 5 7 (2 3 5 7))
+@end lisp
+
+Beachten Sie, dass obiges Ergenis eine Liste verschiedenartiger Elemente
+ist: Zahlen, Symbole (in diesem Fall @code{a}) und als letztes Element
+selbst wieder eine Liste.
+
+@item
+Mehrere Variable können in einer lokalen Umgebung mit Bezeichnern versehen
+werden, indem Sie @code{let} benutzen (siehe @ref{Local Bindings,,, guile,
+GNU Guile Reference Manual}):
+
+@lisp
+(define x 10)
+(let ((x 2)
+      (y 3))
+  (list x y))
+@result{} (2 3)
+
+x
+@result{} 10
+
+y
+@error{} In procedure module-lookup: Unbound variable: y
+@end lisp
+
+Benutzen Sie @code{let*}, damit spätere Variablendeklarationen auf frühere
+verweisen können.
+
+@lisp
+(let* ((x 2)
+       (y (* x 3)))
+  (list x y))
+@result{} (2 6)
+@end lisp
+
+@item
+Die Syntax für Schlüsselwörter ist @code{#:}. Wir benutzen sie, um
+eindeutige Bezeichnungen zu erzeugen. Siehe @ref{Keywords,,, guile, GNU
+Guile Reference Manual}.
+
+@item
+Das Prozentzeichen @code{%} wird in der Regel für globale Variable auf
+Erstellungsebene benutzt, auf die nur lesend zugegriffen werden
+soll. Beachten Sie, dass es sich dabei nur um eine Konvention handelt,
+ähnlich wie @code{_} in C. Scheme behandelt @code{%} genau wie jedes andere
+Zeichen.
+
+@item
+Module werden mit Hilfe von @code{define-module} erzeugt (siehe
+@ref{Creating Guile Modules,,, guile, GNU Guile Reference Manual}). Zum
+Beispiel definiert man mit
+
+@lisp
+(define-module (guix build-system ruby)
+  #:use-module (guix store)
+  #:export (ruby-build
+            ruby-build-system))
+@end lisp
+
+das Modul @code{guix build-system ruby}, das sich unter dem Pfad
+@file{guix/build-system/ruby.scm} innerhalb irgendeines Verzeichnisses im
+Guile-Ladepfad befinden muss. Es hat eine Abhängigkeit auf das Modul
+@code{(guix store)} und exportiert zwei seiner Variablen, @code{ruby-build}
+und @code{ruby-build-system}.
+@end itemize
+
+Für eine detailliertere Einführung können Sie einen Blick auf Steve Litts
+@uref{http://www.troubleshooters.com/codecorn/scheme_guile/hello.htm, Scheme
+at a Glance} werfen.
+
+Eines der Referenzbücher zu Scheme ist das einflussreiche „Structure and
+Interpretation of Computer Programs“, von Harold Abelson und Gerald Jay
+Sussman, mit Julie Sussman. Eine deutsche Übersetzung „Struktur und
+Interpretation von Computerprogrammen“ hat Susanne Daniels-Herold
+verfasst. Vom englischen Original finden Sie eine
+@uref{https://mitpress.mit.edu/sites/default/files/sicp/index.html,
+kostenlose Ausgabe online} zusammen mit
+@uref{https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-001-structure-and-interpretation-of-computer-programs-spring-2005/video-lectures/,
+Videos der von den Autoren gehaltenen Vorlesungen}. Das Buch können Sie im
+Texinfo-Format über das @code{sicp}-Guix-Paket beziehen. Probieren Sie es
+aus: Führen Sie @code{guix install sicp} aus und fangen Sie mit dem Lesen
+an, indem Sie @code{info sicp} eintippen (siehe @ref{,,, sicp, Structure and
+Interpretation of Computer Programs}). Es gibt auch ein
+@uref{https://sarabander.github.io/sicp/, inoffizielles E-Book}.
+
+Sie finden noch mehr Bücher, Anleitungen und andere Ressourcen auf
+@url{https://schemers.org/}.
+
+
+@c *********************************************************************
+@node Paketerstellung
+@chapter Paketerstellung
+
+@cindex Pakete schreiben
+
+In diesem Kapitel bringen wir Ihnen bei, wie Sie Pakete zur mit GNU Guix
+ausgelieferten Paketsammlung beitragen. Dazu gehört, Paketdefinitionen in
+Guile Scheme zu schreiben, sie in Paketmodulen zu organisieren und sie zu
+erstellen.
+
+@menu
+* Anleitung zum Paketeschreiben::  Eine Anleitung, wie Sie Pakete zu Guix 
+                                     hinzufügen.
+@end menu
+
+@node Anleitung zum Paketeschreiben
+@section Anleitung zum Paketeschreiben
+
+GNU Guix zeichnet sich in erster Linie deswegen als das @emph{hackbare}
+Paketverwaltungswerkzeug aus, weil es mit
+@uref{https://www.gnu.org/software/guile/, GNU Guile} arbeitet, einer
+mächtigen, hochsprachlichen Programmiersprache, die einen der Dialekte von
+@uref{https://de.wikipedia.org/wiki/Scheme, Scheme} darstellt. Scheme
+wiederum gehört zur @uref{https://de.wikipedia.org/wiki/Lisp, Lisp-Familie
+von Programmiersprachen}.
+
+Paketdefinitionen werden ebenso in Scheme geschrieben, wodurch Guix auf sehr
+einzigartige Weise mächtiger wird als die meisten anderen
+Paketverwaltungssysteme, die Shell-Skripte oder einfache Sprachen benutzen.
+
+@itemize
+@item
+Sie können sich Funktionen, Strukturen, Makros und all die Ausdrucksstärke
+von Scheme für Ihre Paketdefinitionen zu Nutze machen.
+
+@item
+Durch Vererbung können Sie ohne viel Aufwand ein Paket anpassen, indem Sie
+von ihm erben lassen und nur das Nötige abändern.
+ 
+@item
+Stapelverarbeitung („batch mode“) wird möglich; die ganze Paketsammlung kann
+analysiert, gefiltert und verarbeitet werden. Versuchen Sie, ein
+Serversystem ohne Bildschirm („headless“) auch tatsächlich von allen
+Grafikschnittstellen zu befreien? Das ist möglich. Möchten Sie alles von
+Neuem aus seinem Quellcode erstellen, aber mit eingeschalteten besonderen
+Compileroptimierungen? Übergeben Sie einfach das passende @code{#:make-flags
+"..."}-Argument an die Paketliste. Es wäre nicht übertrieben, hier an die
+@uref{https://wiki.gentoo.org/wiki/USE_flag, USE-Optionen von Gentoo} zu
+denken, aber das hier übertrifft sie: Der Paketautor muss vorher gar nicht
+darüber nachgedacht haben, der Nutzer kann sie selbst @emph{programmieren}!
+@end itemize
+
+Die folgende Anleitung erklärt alles Grundlegende über das Schreiben von
+Paketen mit Guix. Dabei setzen wir kein großes Wissen über das Guix-System
+oder die Lisp-Sprache voraus. Vom Leser wird nur erwartet, dass er mit der
+Befehlszeile vertraut ist und über grundlegende Programmierkenntnisse
+verfügt.
+
+@node Ein Hallo-Welt-Paket
+@subsection Ein Hallo-Welt-Paket
+
+Der Abschnitt „Pakete definieren“ im Handbuch führt in die Grundlagen des
+Paketschreibens für Guix ein (siehe @ref{Pakete definieren,,, guix.de,
+Referenzhandbuch zu GNU Guix}). Im folgenden Abschnitt werden wir diese
+Grundlagen teilweise rekapitulieren.
+
+GNU@tie{}Hello ist ein Projekt, das uns als Stellvertreter für „richtige“
+Projekte und allgemeines Beispiel für das Schreiben von Paketen dient. Es
+verwendet das GNU-Erstellungssystem (@code{./configure && make && make
+install}). Guix stellt uns schon eine Paketdefinition zur Verfügung, die uns
+einen perfekten Ausgangspunkt bietet. Sie können sich ihre Deklaration
+anschauen, indem Sie @code{guix edit hello} von der Befehlszeile
+ausführen. Schauen wir sie uns an:
+
+@lisp
+(define-public hello
+  (package
+    (name "hello")
+    (version "2.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnu/hello/hello-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+    (build-system gnu-build-system)
+    (synopsis "Hello, GNU world: An example GNU package")
+    (description
+     "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+serves as an example of standard GNU coding practices.  As such, it supports
+command-line arguments, multiple languages, and so on.")
+    (home-page "https://www.gnu.org/software/hello/")
+    (license gpl3+)))
+@end lisp
+
+Wie Sie sehen können, ist das meiste klar strukturiert. Aber sehen wir uns
+die Felder zusammen an:
+
+@table @samp
+@item name
+Der Name des Projekts. Wir halten uns an die Konventionen von Scheme und
+bevorzugen deshalb Kleinschreibung ohne Unterstriche, sondern mit
+Bindestrichen zwischen den Wörtern.
+
+@item source
+Dieses Feld enthält eine Beschreibung, was der Ursprung des Quellcodes
+ist. Das @code{origin}-Verbundsobjekt enthält diese Felder:
+
+@enumerate
+@item Die Methode. Wir verwenden hier @code{url-fetch}, um über HTTP/FTP herunterzuladen,
+    aber es gibt auch andere Methoden wie @code{git-fetch} für Git-Repositorys.
+@item Die URI, welche bei @code{url-fetch} normalerweise eine Ortsangabe mit @code{https://} ist.
+    In diesem Fall verweist die besondere URI ‚mirror://gnu‘ auf eine von
+mehreren wohlbekannten Ortsangaben, von denen Guix jede durchprobieren kann,
+um den Quellcode herunterzuladen, wenn es bei manchen davon nicht klappt.
+@item Die @code{sha256}-Prüfsumme der angefragten Datei.
+    Sie ist notwendig, damit sichergestellt werden kann, dass der Quellcode
+nicht beschädigt ist. Beachten Sie, dass Guix mit Zeichenketten in
+Base32-Kodierung arbeitet, weshalb wir die @code{base32}-Funktion aufrufen.
+@end enumerate
+
+@item build-system
+
+Hier glänzt Schemes Fähigkeit zur Abstraktion: In diesem Fall abstrahiert
+@code{gnu-build-system} die berühmten Schritte @code{./configure && make &&
+make install}, die sonst in der Shell aufgerufen würden. Zu den anderen
+Erstellungssystemen gehören das @code{trivial-build-system}, das nichts tut
+und dem Paketautoren das Schreiben sämtlicher Erstellungsschritte
+abverlangt, das @code{python-build-system}, das @code{emacs-build-system},
+und viele mehr (siehe @ref{Erstellungssysteme,,, guix.de, Referenzhandbuch
+zu GNU Guix}).
+
+@item synopsis
+Die Zusammenfassung. Sie sollte eine knappe Beschreibung sein, was das Paket
+tut. Für viele Pakete findet sich auf der Homepage ein Einzeiler, der als
+Zusammenfassung benutzt werden kann.
+
+@item description
+Genau wie bei der Zusammenfassung ist es in Ordnung, die Beschreibung des
+Projekts für das Paket wiederzuverwenden. Beachten Sie, dass Guix dafür
+Texinfo-Syntax verlangt.
+
+@item home-page
+Hier soll möglichst HTTPS benutzt werden.
+
+@item license
+Siehe die vollständige Liste verfügbarer Lizenzen in
+@code{guix/licenses.scm} im Guix-Quellcode.
+@end table
+
+Es wird Zeit, unser erstes Paket zu schreiben! Aber noch nichts tolles, wir
+bleiben bei einem Paket @code{my-hello} stelltvertretend für „richtige“
+Software; es ist eine Kopie obiger Deklaration.
+
+Genau wie beim Ritual, Neulinge in Programmiersprachen „Hallo Welt“
+schreiben zu lassen, fangen wir mit der vielleicht „arbeitsintensivsten“
+Herangehensweise ans Paketeschreiben an. Wir kümmern uns später darum, wie
+man am besten an Paketen arbeitet; erst einmal nehmen wir den einfachsten
+Weg.
+
+Speichern Sie den folgenden Code in eine Datei @file{my-hello.scm}.
+
+@lisp
+(use-modules (guix packages)
+             (guix download)
+             (guix build-system gnu)
+             (guix licenses))
+
+(package
+  (name "my-hello")
+  (version "2.10")
+  (source (origin
+            (method url-fetch)
+            (uri (string-append "mirror://gnu/hello/hello-" version
+                                ".tar.gz"))
+            (sha256
+             (base32
+              "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+  (build-system gnu-build-system)
+  (synopsis "Hello, Guix world: An example custom Guix package")
+  (description
+   "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+serves as an example of standard GNU coding practices.  As such, it supports
+command-line arguments, multiple languages, and so on.")
+  (home-page "https://www.gnu.org/software/hello/")
+  (license gpl3+))
+@end lisp
+
+Wir erklären den zusätzlichen Code in Kürze.
+
+Spielen Sie ruhig mit unterschiedlichen Werten für die verschiedenen Felder
+herum. Wenn Sie den Quellort (die „source“) ändern, müssen Sie die Prüfsumme
+aktualisieren. Tatsächlich weigert sich Guix, etwas zu erstellen, wenn die
+angegebene Prüfsumme nicht zu der berechneten Prüfsumme des Quellcodes
+passt. Um die richtige Prüfsumme für die Paketdeklaration zu finden, müssen
+wir den Quellcode herunterladen, die SHA256-Summe davon berechnen und sie in
+Base32 umwandeln.
+
+Glücklicherweise kann Guix diese Aufgabe automatisieren; wir müssen
+lediglich die URI übergeben.
+
+@c TRANSLATORS: This is example shell output.
+@example sh
+$ guix download mirror://gnu/hello/hello-2.10.tar.gz
+
+Starting download of /tmp/guix-file.JLYgL7
+From https://ftpmirror.gnu.org/gnu/hello/hello-2.10.tar.gz...
+following redirection to `https://mirror.ibcp.fr/pub/gnu/hello/hello-2.10.tar.gz'...
+ …10.tar.gz  709KiB                                 2.5MiB/s 00:00 [##################] 100.0%
+/gnu/store/hbdalsf5lpf01x4dcknwx6xbn6n5km6k-hello-2.10.tar.gz
+0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i
+@end example
+
+In diesem speziellen Fall sagt uns die Ausgabe, welcher Spiegelserver
+ausgewählt wurde. Wenn das Ergebnis des obigen Befehls nicht dasselbe ist
+wie im Codeschnipsel, dann aktualisieren Sie Ihre
+@code{my-hello}-Deklaration entsprechend.
+
+Beachten Sie, dass Tarball-Archive von GNU-Paketen mit einer
+OpenPGP-Signatur ausgeliefert werden, deshalb sollten Sie mit Sicherheit die
+Signatur dieses Tarballs mit „gpg“ überprüfen, um ihn zu authentifizieren,
+bevor Sie weitermachen.
+
+@c TRANSLATORS: This is example shell output.
+@example sh
+$ guix download mirror://gnu/hello/hello-2.10.tar.gz.sig
+
+Starting download of /tmp/guix-file.03tFfb
+From https://ftpmirror.gnu.org/gnu/hello/hello-2.10.tar.gz.sig...
+following redirection to `https://ftp.igh.cnrs.fr/pub/gnu/hello/hello-2.10.tar.gz.sig'...
+ ….tar.gz.sig  819B                                                                                                                       1.2MiB/s 00:00 [##################] 100.0%
+/gnu/store/rzs8wba9ka7grrmgcpfyxvs58mly0sx6-hello-2.10.tar.gz.sig
+0q0v86n3y38z17rl146gdakw9xc4mcscpk8dscs412j22glrv9jf
+$ gpg --verify /gnu/store/rzs8wba9ka7grrmgcpfyxvs58mly0sx6-hello-2.10.tar.gz.sig /gnu/store/hbdalsf5lpf01x4dcknwx6xbn6n5km6k-hello-2.10.tar.gz
+gpg: Signatur vom So 16 Nov 2014 13:08:37 CET
+gpg:                mittels RSA-Schlüssel A9553245FDE9B739
+gpg: Korrekte Signatur von "Sami Kerola (https://www.iki.fi/kerolasa/) <kerolasa@@iki.fi>" [unbekannt]
+gpg: WARNUNG: Dieser Schlüssel trägt keine vertrauenswürdige Signatur!
+gpg:          Es gibt keinen Hinweis, daß die Signatur wirklich dem vorgeblichen Besitzer gehört.
+Haupt-Fingerabdruck  = 8ED3 96E3 7E38 D471 A005  30D3 A955 3245 FDE9 B739
+@end example
+
+Sie können dann unbesorgt das hier ausführen:
+
+@c TRANSLATORS: Do not translate this command
+@example sh
+$ guix package --install-from-file=my-hello.scm
+@end example
+
+Nun sollte @code{my-hello} in Ihrem Profil enthalten sein!
+
+@c TRANSLATORS: Do not translate this command
+@example sh
+$ guix package --list-installed=my-hello
+my-hello	2.10	out
+/gnu/store/f1db2mfm8syb8qvc357c53slbvf1g9m9-my-hello-2.10
+@end example
+
+Wir sind so weit gekommen, wie es ohne Scheme-Kenntnisse möglich ist. Bevor
+wir mit komplexeren Paketen weitermachen, ist jetzt der Zeitpunkt gekommen,
+Ihr Wissen über Scheme zu entstauben. Siehe @ref{Ein Schnellkurs in Scheme}
+für eine Auffrischung.
+
+@node Herangehensweisen
+@subsection Herangehensweisen
+
+Im Rest dieses Kapitels setzen wir ein paar grundlegende
+Scheme-Programmierkenntnisse voraus. Wir wollen uns nun verschiedene
+mögliche Herangehensweisen anschauen, wie man an Guix-Paketen arbeiten kann.
+
+Es gibt mehrere Arten, eine Umgebung zum Paketeschreiben aufzusetzen.
+
+Unsere Empfehlung ist, dass Sie direkt am Checkout des Guix-Quellcodes
+arbeiten, weil es dann für alle einfacher ist, zu Guix beizutragen.
+
+Werfen wir aber zunächst einen Blick auf andere Möglichkeiten.
+
+@node Lokale Datei
+@subsubsection Lokale Datei
+
+Diese Methode haben wir zuletzt für @samp{my-hello} benutzt. Jetzt nachdem
+wir uns mit den Scheme-Grundlagen befasst haben, können wir uns den Code am
+Anfang erklären. @code{guix package --help} sagt uns:
+
+@example
+  -f, --install-from-file=DATEI
+                         das Paket installieren, zu dem der Code in der DATEI
+                           ausgewertet wird
+@end example
+
+Daher @emph{muss} der letzte Ausdruck ein Paket liefern, was im vorherigen
+Beispiel der Fall ist.
+
+Der Ausdruck @code{use-modules} sagt aus, welche Module in der Datei
+gebraucht werden. Module sind eine Sammlung aus Werten und Prozeduren. In
+anderen Programmiersprachen werden sie oft „Bibliotheken“ oder „Pakete“
+genannt.
+
+@node @samp{GUIX_PACKAGE_PATH}
+@subsubsection @samp{GUIX_PACKAGE_PATH}
+
+@emph{Anmerkung: Seit Guix 0.16 sind die vielseitigeren @dfn{Kanäle} von Guix die
+bevorzugte Wahl und sie lösen den @samp{GUIX_PACKAGE_PATH} ab. Siehe den
+nächsten Abschnitt.}
+
+Es kann mühsam sein, die Datei auf der Befehlszeile anzugeben, statt einfach
+@code{guix package --install my-hello} aufzurufen, wie man es bei den
+offiziellen Paketen tun würde.
+
+Guix ermöglicht es, den Prozess zu optimieren, indem man so viele
+„Paketdeklarationsverzeichnisse“, wie man will, hinzufügt.
+
+Create a directory, say @file{~./guix-packages} and add it to the
+@samp{GUIX_PACKAGE_PATH} environment variable:
+
+@example
+$ mkdir ~/guix-packages
+$ export GUIX_PACKAGE_PATH=~/guix-packages
+@end example
+
+Um mehrere Verzeichnisse hinzuzufügen, trennen Sie diese ab durch einen
+Doppelpunkt (@code{:}).
+
+Unser @samp{my-hello} von vorher braucht zudem ein paar Anpassungen:
+
+@lisp
+(define-module (my-hello)
+  #:use-module (guix licenses)
+  #:use-module (guix packages)
+  #:use-module (guix build-system gnu)
+  #:use-module (guix download))
+
+(define-public my-hello
+  (package
+    (name "my-hello")
+    (version "2.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnu/hello/hello-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+    (build-system gnu-build-system)
+    (synopsis "Hello, Guix world: An example custom Guix package")
+    (description
+     "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+serves as an example of standard GNU coding practices.  As such, it supports
+command-line arguments, multiple languages, and so on.")
+    (home-page "https://www.gnu.org/software/hello/")
+    (license gpl3+)))
+@end lisp
+
+Beachten Sie, dass wir den Paketwert einer exportierten Variablen mit
+@code{define-public} zugewiesen haben. Das bedeutet, das Paket wird einer
+Variablen @code{my-hello} zugewiesen, damit darauf verwiesen werden
+kann. Unter anderem kann es dadurch als Abhängigkeit anderer Pakete
+verwendet werden.
+
+Wenn Sie @code{guix package --install-from-file=my-hello.scm} auf der obigen
+Datei aufrufen, geht es schief, weil der letzte Ausdruck,
+@code{define-public}, kein Paket zurückliefert. Wenn Sie trotzdem
+@code{define-public} für jene Herangehensweise verwenden möchten, stellen
+Sie sicher, dass am Ende der Datei eine Auswertung von @code{my-hello}
+steht:
+
+@lisp
+; …
+(define-public my-hello
+  ; …
+  )
+
+my-hello
+@end lisp
+
+Meistens tut man das aber nicht.
+
+@samp{my-hello} sollte nun Teil der Paketsammlung sein, genau wie all die
+anderen, offiziellen Pakete. Sie können das so ausprobieren:
+
+@example
+$ guix package --show=my-hello
+@end example
+
+@node Guix-Kanäle
+@subsubsection Guix-Kanäle
+
+Guix 0.16 hat Kanäle eingeführt, die sehr ähnlich zu
+@samp{GUIX_PACKAGE_PATH} sind, sich aber besser integrieren und
+Provenienzverfolgung ermöglichen. Kanäle befinden sich nicht unbedingt auf
+einem lokalen Rechner, sie können zum Beispiel auch anderen als öffentliches
+Git-Repository angeboten werden. Natürlich können zur selben Zeit mehrere
+Kanäle benutzt werden.
+
+Siehe @ref{Kanäle,,, guix.de, Referenzhandbuch zu GNU Guix} für Details zu
+deren Einrichtung.
+
+@node Direkt am Checkout hacken
+@subsubsection Direkt am Checkout hacken
+
+Es wird empfohlen, direkt am Code des Guix-Projekts zu arbeiten, weil Ihre
+Änderungen dann später mit weniger Schwierigkeiten bei uns eingereicht
+werden können, damit Ihre harte Arbeit der Gemeinschaft nützt!
+
+Anders als die meisten Software-Distributionen werden bei Guix sowohl
+Werkzeuge (einschließlich des Paketverwaltungsprogramms) als auch die
+Paketdefinitionen in einem Repository gespeichert. Der Grund für diese
+Entscheidung war, dass Entwickler die Freiheit haben sollten, die
+Programmierschnittstelle (API) zu ändern, ohne Inkompatibilitäten
+einzuführen, indem alle Pakete gleichzeitig mit der API aktualisiert
+werden. Dadurch wird die Entwicklung weniger träge.
+
+Legen Sie ein Checkout des offiziellen @uref{https://git-scm.com/,
+Git-Repositorys} an:
+
+@example
+$ git clone https://git.savannah.gnu.org/git/guix.git
+@end example
+
+Im Rest dieses Artikels schreiben wir @samp{$GUIX_CHECKOUT}, wenn wir den
+Ort meinen, an dem das Checkout gespeichert ist.
+
+
+Folgen Sie den Anweisungen im Handbuch (siehe (@ref{Mitwirken,,, guix.de,
+Referenzhandbuch zu GNU Guix}), um die nötige Umgebung für die Nutzung des
+Repositorys herzustellen.
+
+Sobald sie hergestellt wurde, sollten Sie die Paketdefinitionen aus der
+Repository-Umgebung benutzen können.
+
+Versuchen Sie sich ruhig daran, die Paketdefinitionen zu editieren, die Sie
+in @samp{$GUIX_CHECKOUT/gnu/packages} finden.
+
+Das Skript @samp{$GUIX_CHECKOUT/pre-inst-env} ermöglicht es Ihnen,
+@samp{guix} auf der Paketsammlung des Repositorys aufzurufen (siehe
+@ref{Guix vor der Installation ausführen,,, guix.de, Referenzhandbuch zu GNU
+Guix}).
+
+@itemize
+@item
+So suchen Sie Pakete, z.B.@: Ruby:
+
+@example
+  $ cd $GUIX_CHECKOUT
+  $ ./pre-inst-env guix package --list-available=ruby
+      ruby    1.8.7-p374      out     gnu/packages/ruby.scm:119:2
+      ruby    2.1.6   out     gnu/packages/ruby.scm:91:2
+      ruby    2.2.2   out     gnu/packages/ruby.scm:39:2
+@end example
+
+@item
+Erstellen Sie ein Paket, z.B.@: Ruby in Version 2.1:
+
+@example
+  $ ./pre-inst-env guix build --keep-failed ruby@@2.1
+  /gnu/store/c13v73jxmj2nir2xjqaz5259zywsa9zi-ruby-2.1.6
+@end example
+
+@item
+Installieren Sie es in Ihr Profil:
+
+@example
+  $ ./pre-inst-env guix package --install ruby@@2.1
+@end example
+
+@item
+Prüfen Sie auf häufige Fehler:
+
+@example
+  $ ./pre-inst-env guix lint ruby@@2.1
+@end example
+@end itemize
+
+Guix ist bestrebt, einen hohen Standard an seine Pakete anzusetzen. Wenn Sie
+Beiträge zum Guix-Projekt leisten,
+
+@itemize
+@item
+schreiben Sie Ihren Code im Stil von Guix (siehe @ref{Programmierstil,,,
+guix.de, Referenzhandbuch zu GNU Guix})
+@item
+und schauen Sie sich die Kontrollliste aus dem Handbuch (siehe
+@ref{Einreichen von Patches,,, guix.de, Referenzhandbuch zu GNU Guix}) noch
+einmal an.
+@end itemize
+
+Sobald Sie mit dem Ergebnis zufrieden sind, freuen wir uns, wenn Sie Ihren
+Beitrag an uns schicken, damit wir ihn in Guix aufnehmen. Dieser Prozess
+wird auch im Handbuch beschrieben (siehe @ref{Mitwirken,,, guix.de,
+Referenzhandbuch zu GNU Guix})<.
+
+
+Es handelt sich um eine gemeinschaftliche Arbeit, je mehr also mitmachen,
+desto besser wird Guix!
+
+@node Erweitertes Beispiel
+@subsection Erweitertes Beispiel
+
+Einfacher als obiges Hallo-Welt-Beispiel wird es nicht. Pakete können auch
+komplexer als das sein und Guix eignet sich für fortgeschrittenere
+Szenarien. Schauen wir uns ein anderes, umfangreicheres Paket an (leicht
+modifiziert gegenüber Guix’ Quellcode):
+
+@lisp
+(define-module (gnu packages version-control)
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (guix utils)
+  #:use-module (guix packages)
+  #:use-module (guix git-download)
+  #:use-module (guix build-system cmake)
+  #:use-module (gnu packages ssh)
+  #:use-module (gnu packages web)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages tls))
+
+(define-public my-libgit2
+  (let ((commit "e98d0a37c93574d2c6107bf7f31140b548c6a7bf")
+        (revision "1"))
+    (package
+      (name "my-libgit2")
+      (version (git-version "0.26.6" revision commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "https://github.com/libgit2/libgit2/")
+                      (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "17pjvprmdrx4h6bb1hhc98w9qi6ki7yl57f090n9kbhswxqfs7s3"))
+                (patches (search-patches "libgit2-mtime-0.patch"))
+                (modules '((guix build utils)))
+                (snippet '(begin
+                            ;; Remove bundled software.
+                            (delete-file-recursively "deps")
+                            #t))))
+      (build-system cmake-build-system)
+      (outputs '("out" "debug"))
+      (arguments
+       `(#:tests? #t                            ; Run the test suite (this is the default)
+         #:configure-flags '("-DUSE_SHA1DC=ON") ; SHA-1 collision detection
+         #:phases
+         (modify-phases %standard-phases
+           (add-after 'unpack 'fix-hardcoded-paths
+             (lambda _
+               (substitute* "tests/repo/init.c"
+                 (("#!/bin/sh") (string-append "#!" (which "sh"))))
+               (substitute* "tests/clar/fs.h"
+                 (("/bin/cp") (which "cp"))
+                 (("/bin/rm") (which "rm")))
+               #t))
+           ;; Run checks more verbosely.
+           (replace 'check
+             (lambda _ (invoke "./libgit2_clar" "-v" "-Q")))
+           (add-after 'unpack 'make-files-writable-for-tests
+               (lambda _ (for-each make-file-writable (find-files "." ".*")))))))
+      (inputs
+       `(("libssh2" ,libssh2)
+         ("http-parser" ,http-parser)
+         ("python" ,python-wrapper)))
+      (native-inputs
+       `(("pkg-config" ,pkg-config)))
+      (propagated-inputs
+       ;; These two libraries are in 'Requires.private' in libgit2.pc.
+       `(("openssl" ,openssl)
+         ("zlib" ,zlib)))
+      (home-page "https://libgit2.github.com/")
+      (synopsis "Library providing Git core methods")
+      (description
+       "Libgit2 is a portable, pure C implementation of the Git core methods
+provided as a re-entrant linkable library with a solid API, allowing you to
+write native speed custom Git applications in any language with bindings.")
+      ;; GPLv2 with linking exception
+      (license license:gpl2))))
+@end lisp
+
+(In solchen Fällen, wo Sie nur ein paar wenige Felder einer Paketdefinition
+abändern wollen, wäre es wirklich besser, wenn Sie Vererbung einsetzen
+würden, statt alles abzuschreiben. Siehe unten.)
+
+Reden wir über diese Felder im Detail.
+
+@subsubsection @code{git-fetch}-Methode
+
+Anders als die @code{url-fetch}-Methode erwartet @code{git-fetch} eine
+@code{git-reference}, welche ein Git-Repository und einen Commit
+entgegennimmt. Der Commit kann eine beliebige Art von Git-Referenz sein,
+z.B.@: ein Tag. Wenn die @code{version} also mit einem Tag versehen ist,
+kann sie einfach benutzt werden. Manchmal ist dem Tag ein Präfix @code{v}
+vorangestellt. In diesem Fall würden Sie @code{(commit (string-append "v"
+version))} schreiben.
+
+Um sicherzustellen, dass der Quellcode aus dem Git-Repository in einem
+nachvollziehbaren Verzeichnis mit lesbarem Namen landet, schreiben wir
+@code{(file-name (git-file-name name version))}.
+
+Beachten Sie, dass auch eine Prozedur @code{git-version} existiert, mit der
+die Version beim Paketieren eines bestimmten Commits eines Programms
+abgeleitet werden kann.
+
+@subsubsection Schnipsel
+
+Snippets are quoted (i.e. non-evaluated) Scheme code that are a means of
+patching the source.  They are a Guix-y alternative to the traditional
+@file{.patch} files.  Because of the quote, the code in only evaluated when
+passed to the Guix daemon for building.  There can be as many snippets as
+needed.
+
+In Schnipseln könnten zusätzliche Guile-Module benötigt werden. Diese können
+importiert werden, indem man sie im Feld @code{modules} angibt.
+
+@subsubsection Eingaben
+
+Zunächst ein syntaktischer Kommentar: Sehen Sie die Syntax mit
+@code{quasiquote} und Komma?
+
+@lisp
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+@end lisp
+
+ist das Gleiche wie
+
+@lisp
+    (native-inputs
+     (list (list "pkg-config" pkg-config)))
+@end lisp
+
+Sie werden hauptsächlich erstere Variante sehen, weil sie kürzer ist.
+
+Es gibt 3 verschiedene Arten von Eingaben. Kurz gefasst:
+
+@table @asis
+@item native-inputs
+Sie werden zum Erstellen gebraucht, aber @emph{nicht} zur Laufzeit — wenn
+Sie ein Paket als Substitut installieren, werden diese Eingaben nirgendwo
+installiert.
+@item inputs
+Sie werden in den Store installiert, aber nicht in das Profil, und sie
+stehen beim Erstellen zur Verfügung.
+@item propagated-inputs
+Sie werden sowohl in den Store als auch ins Profil installiert und sind auch
+beim Erstellen verfügbar.
+@end table
+
+Siehe @ref{„package“-Referenz,,, guix.de, Referenzhandbuch zu GNU Guix} für
+mehr Details.
+
+Der Unterschied zwischen den verschiedenen Eingaben ist wichtig: Wenn eine
+Abhängigkeit als @code{input} statt als @code{propagated-input} ausreicht,
+dann sollte sie auch so eingeordnet werden, sonst „verschmutzt“ sie das
+Profil des Benutzers ohne guten Grund.
+
+Wenn eine Nutzerin beispielsweise ein grafisches Programm installiert, das
+von einem Befehlszeilenwerkzeug abhängt, sie sich aber nur für den
+grafischen Teil interessiert, dann sollten wir sie nicht zur Installation
+des Befehlszeilenwerkzeugs in ihr Benutzerprofil zwingen. Um die
+Abhängigkeit sollte sich das Paket kümmern, nicht seine Benutzerin. Mit
+@emph{Inputs} können wir Abhängigkeiten verwenden, wo sie gebraucht werden,
+ohne Nutzer zu belästigen, indem wir ausführbare Dateien (oder Bibliotheken)
+in deren Profil installieren.
+
+Das Gleiche gilt für @emph{native-inputs}: Wenn das Programm einmal
+installiert ist, können Abhängigkeiten zur Erstellungszeit gefahrlos dem
+Müllsammler anvertraut werden. Sie sind auch besser, wenn ein Substitut
+verfügbar ist, so dass nur die @code{inputs} und @code{propagated-inputs}
+heruntergeladen werden; @code{native-inputs} braucht niemand, der das Paket
+aus einem Substitut heraus installiert.
+
+@subsubsection Ausgaben
+
+Genau wie ein Paket mehrere Eingaben haben kann, kann es auch mehrere
+Ausgaben haben.
+
+Jede Ausgabe entspricht einem anderen Verzeichnis im Store.
+
+Die Benutzerin kann sich entscheiden, welche Ausgabe sie installieren will;
+so spart sie Platz auf dem Datenträger und verschmutzt ihr Benutzerprofil
+nicht mit unerwünschten ausführbaren Dateien oder Bibliotheken.
+
+Nach Ausgaben zu trennen ist optional. Wenn Sie kein @code{outputs}-Feld
+schreiben, heißt die standardmäßige und einzige Ausgabe (also das ganze
+Paket) schlicht @code{"out"}.
+
+Typische Namen für getrennte Ausgaben sind @code{debug} und @code{doc}.
+
+Es wird empfohlen, getrennte Ausgaben nur dann anzubieten, wenn Sie gezeigt
+haben, dass es sich lohnt, d.h.@: wenn die Ausgabengröße signifikant ist
+(vergleichen Sie sie mittels @code{guix size}) oder das Paket modular
+aufgebaut ist.
+
+@subsubsection Argumente ans Erstellungssystem
+
+@code{arguments} ist eine Liste aus Schlüsselwort-Wert-Paaren (eine
+„keyword-value list“), mit denen der Erstellungsprozess konfiguriert wird.
+
+Das einfachste Argument @code{#:tests?} kann man benutzen, um den
+Testkatalog bei der Erstellung des Pakets nicht zu prüfen. Das braucht man
+meistens dann, wenn das Paket überhaupt keinen Testkatalog hat. Wir
+empfehlen sehr, den Testkatalog zu benutzen, wenn es einen gibt.
+
+Ein anderes häufiges Argument ist @code{:make-flags}, was eine Liste an den
+@code{make}-Aufruf anzuhängender Befehlszeilenargumente festlegt, so wie Sie
+sie auf der Befehlszeile angeben würden. Zum Beispiel werden die folgenden
+@code{:make-flags}
+
+@lisp
+#:make-flags (list (string-append "prefix=" (assoc-ref %outputs "out"))
+                   "CC=gcc")
+@end lisp
+
+übersetzt zu
+
+@example
+$ make CC=gcc prefix=/gnu/store/...-<out>
+@end example
+
+This sets the C compiler to @code{gcc} and the @code{prefix} variable (the
+installation directory in Make parlance) to @code{(assoc-ref %outputs
+"out")}, which is a build-stage global variable pointing to the destination
+directory in the store (something like
+@file{/gnu/store/...-my-libgit2-20180408}).
+
+Auf gleiche Art kann man auch die Befehlszeilenoptionen für configure
+festlegen:
+
+@lisp
+#:configure-flags '("-DUSE_SHA1DC=ON")
+@end lisp
+
+Die Variable @code{%build-inputs} wird auch in diesem Sichtbarkeitsbereich
+erzeugt. Es handelt sich um eine assoziative Liste, die von den Namen der
+Eingaben auf ihre Verzeichnisse im Store abbildet.
+
+Das @code{phases}-Schlüsselwort listet der Reihe nach die vom
+Erstellungssystem durchgeführten Schritte auf. Zu den üblichen Phasen
+gehören @code{unpack}, @code{configure}, @code{build}, @code{install} und
+@code{check}. Um mehr über diese Phasen zu lernen, müssen Sie sich die
+Definition des zugehörigen Erstellungssystems in
+@samp{$GUIX_CHECKOUT/guix/build/gnu-build-system.scm} anschauen:
+
+@lisp
+(define %standard-phases
+  ;; Standard build phases, as a list of symbol/procedure pairs.
+  (let-syntax ((phases (syntax-rules ()
+                         ((_ p ...) `((p . ,p) ...)))))
+    (phases set-SOURCE-DATE-EPOCH set-paths install-locale unpack
+            bootstrap
+            patch-usr-bin-file
+            patch-source-shebangs configure patch-generated-file-shebangs
+            build check install
+            patch-shebangs strip
+            validate-runpath
+            validate-documentation-location
+            delete-info-dir-file
+            patch-dot-desktop-files
+            install-license-files
+            reset-gzip-timestamps
+            compress-documentation)))
+@end lisp
+
+Alternativ auf einer REPL:
+
+@lisp
+(add-to-load-path "/path/to/guix/checkout")
+,use (guix build gnu-build-system)
+(map first %standard-phases)
+@result{} (set-SOURCE-DATE-EPOCH set-paths install-locale unpack bootstrap patch-usr-bin-file patch-source-shebangs configure patch-generated-file-shebangs build check install patch-shebangs strip validate-runpath validate-documentation-location delete-info-dir-file patch-dot-desktop-files install-license-files reset-gzip-timestamps compress-documentation)
+@end lisp
+
+Wenn Sie mehr darüber wissen wollen, was in diesen Phasen passiert, schauen
+Sie in den jeweiligen Prozeduren.
+
+Beispielsweise sieht momentan, als dies hier geschrieben wurde, die
+Definition von @code{unpack} für das GNU-Erstellungssystem so aus:
+
+@lisp
+(define* (unpack #:key source #:allow-other-keys)
+  "Unpack SOURCE in the working directory, and change directory within the
+source.  When SOURCE is a directory, copy it in a sub-directory of the current
+working directory."
+  (if (file-is-directory? source)
+      (begin
+        (mkdir "source")
+        (chdir "source")
+
+        ;; Preserve timestamps (set to the Epoch) on the copied tree so that
+        ;; things work deterministically.
+        (copy-recursively source "."
+                          #:keep-mtime? #t))
+      (begin
+        (if (string-suffix? ".zip" source)
+            (invoke "unzip" source)
+            (invoke "tar" "xvf" source))
+        (chdir (first-subdirectory "."))))
+  #t)
+@end lisp
+
+Beachten Sie den Aufruf von @code{chdir}: Damit wird das Arbeitsverzeichnis
+zu demjenigen gewechselt, wohin die Quelldateien entpackt wurden. In jeder
+Phase nach @code{unpack} dient also das Verzeichnis mit den Quelldateien als
+Arbeitsverzeichnis. Deswegen können wir direkt mit den Quelldateien
+arbeiten, zumindest solange keine spätere Phase das Arbeitsverzeichnis
+woandershin wechselt.
+
+Die Liste der @code{%standard-phases} des Erstellungssystems ändern wir mit
+Hilfe des @code{modify-phases}-Makros über eine Liste von Änderungen. Sie
+kann folgende Formen haben:
+
+@itemize
+@item
+@code{(add-before PHASE NEUE-PHASE PROZEDUR)}: Die @code{PROZEDUR} namens
+@code{NEUE-PHASE} vor @code{PHASE} ausführen.
+@item
+@code{(add-after PHASE NEUE-PHASE PROZEDUR)}: Genauso, aber danach.
+@item
+@code{(replace PHASE PROZEDUR)}.
+@item
+@code{(delete PHASE)}.
+@end itemize
+
+Die @code{PROZEDUR} unterstützt die Schlüsselwortargumente @code{inputs} und
+@code{outputs}. Jede Eingabe (ob sie @emph{native}, @emph{propagated} oder
+nichts davon ist) und jedes Ausgabeverzeichnis ist in diesen Variablen mit
+dem jeweiligen Namen assoziiert. @code{(assoc-ref outputs "out")} ist also
+das Store-Verzeichnis der Hauptausgabe des Pakets. Eine Phasenprozedur kann
+so aussehen:
+
+@lisp
+(lambda* (#:key inputs outputs #:allow-other-keys)
+  (let (((bash-directory (assoc-ref inputs "bash"))
+         (output-directory (assoc-ref outputs "out"))
+         (doc-directory (assoc-ref outputs "doc"))
+  ; ...
+  #t)
+@end lisp
+
+Die Prozedur muss bei Erfolg @code{#t} zurückliefern. Auf den Rückgabewert
+des letzten Ausdrucks, mit dem die Phase angepasst wurde, kann man sich
+nicht verlassen, weil es keine Garantie gibt, dass der Rückgabewert
+@code{#t} sein wird. Deswegen schreiben wir dahinter @code{#t}, damit bei
+erfolgreicher Ausführung der richtige Wert geliefert wird.
+
+@subsubsection Code-Staging
+
+Aufmerksame Leser könnten die Syntax mit @code{quasiquote} und Komma im
+Argumentefeld bemerkt haben. Tatsächlich sollte der Erstellungscode in der
+Paketdeklaration @emph{nicht} auf Client-Seite ausgeführt werden, sondern
+erst, wenn er an den Guix-Daemon übergeben worden ist. Der Mechanismus, über
+den Code zwischen zwei laufenden Prozessen weitergegeben wird, nennen wir
+@uref{https://arxiv.org/abs/1709.00833, Code-Staging}.
+
+@subsubsection Hilfsfunktionen
+
+When customizing @code{phases}, we often need to write code that mimics the
+equivalent system invocations (@code{make}, @code{mkdir}, @code{cp}, etc.)@:
+commonly used during regular ``Unix-style'' installations.
+
+Manche, wie @code{chmod}, sind Teil von Guile. Siehe das @ref{,,, guile,
+Referenzhandbuch zu Guile} für eine vollständige Liste.
+
+Guix stellt zusätzliche Hilfsfunktionen zur Verfügung, die bei der
+Paketverwaltung besonders praktisch sind.
+
+Manche dieser Funktionalitäten finden Sie in
+@samp{$GUIX_CHECKOUT/guix/guix/build/utils.scm}. Die meisten spiegeln das
+Verhalten traditioneller Unix-Systembefehle wider:
+
+@table @asis
+@item which
+Das Gleiche wie der @samp{which}-Systembefehl.
+@item find-files
+Wie der @samp{find} Systembefehl.
+@item mkdir-p
+Wie @samp{mkdir -p}, das Elternverzeichnisse erzeugt, wenn nötig.
+@item install-file
+Ähnlich wie @samp{install} beim Installieren einer Datei in ein (nicht
+unbedingt existierendes) Verzeichnis. Guile kennt @code{copy-file}, das wie
+@samp{cp} funktioniert.
+@item copy-recursively
+Wie @samp{cp -r}.
+@item delete-file-recursively
+Wie @samp{rm -rf}.
+@item invoke
+Eine ausführbare Datei ausführen. Man sollte es benutzen und nicht
+@code{system*}.
+@item with-directory-excursion
+Den Rumpf in einem anderen Arbeitsverzeichnis ausführen und danach wieder in
+das vorherige Arbeitsverzeichnis wechseln.
+@item substitute*
+Eine „@command{sed}-artige“ Funktion.
+@end table
+
+@subsubsection Modulpräfix
+
+Die Lizenz in unserem letzten Beispiel braucht ein Präfix. Der Grund liegt
+darin, wie das @code{license}-Modul importiert worden ist, nämlich
+@code{#:use-module ((guix licenses)  #:prefix license:)}. Der
+Importmechanismus von Guile-Modulen (siehe @ref{Using Guile Modules,,,
+guile, Referenzhandbuch zu Guile}) gibt Benutzern die volle Kontrolle über
+Namensräume. Man braucht sie, um Konflikte zu lösen, z.B.@ zwischen der
+@samp{zlib}-Variablen aus @samp{licenses.scm} (dieser Wert repräsentiert
+eine @emph{Softwarelizenz}) und der @samp{zlib}-Variablen aus
+@samp{compression.scm} (ein Wert, der für ein @emph{Paket} steht).
+
+@node Andere Erstellungssysteme
+@subsection Andere Erstellungssysteme
+
+Was wir bisher gesehen haben reicht für die meisten Pakete aus, die als
+Erstellungssystem etwas anderes als @code{trivial-build-system}
+verwenden. Letzteres automatisiert gar nichts und überlässt es Ihnen, alles
+zur Erstellung manuell festzulegen. Das kann einen noch mehr beanspruchen
+und wir beschreiben es hier zur Zeit nicht, aber glücklicherweise braucht
+man dieses System auch nur in seltenen Fällen.
+
+Bei anderen Erstellungssystemen wie ASDF, Emacs, Perl, Ruby und vielen
+anderen ist der Prozess sehr ähnlich zum GNU-Erstellungssystem abgesehen von
+ein paar speziellen Argumenten.
+
+Siehe @ref{Erstellungssysteme,,, guix.de, Referenzhandbuch zu GNU Guix}, für
+mehr Informationen über Erstellungssysteme, oder den Quellcode in den
+Verzeichnissen @samp{$GUIX_CHECKOUT/guix/build} und
+@samp{$GUIX_CHECKOUT/guix/build-system}.
+
+@node Programmierbare und automatisierte Paketdefinition
+@subsection Programmierbare und automatisierte Paketdefinition
+
+Wir können es nicht oft genug wiederholen: Eine Allzweck-Programmiersprache
+zur Hand zu haben macht Dinge möglich, die traditionelle Paketverwaltung
+weit übersteigen.
+
+Wir können uns das anhand Guix’ großartiger Funktionalitäten klarmachen!
+
+@node Rekursive Importer
+@subsubsection Rekursive Importer
+
+Sie könnten feststellen, dass manche Erstellungssysteme gut genug sind und
+nichts weiter zu tun bleibt, um ein Paket zu verfassen. Das Paketeschreiben
+kann so monoton werden und man wird dessen bald überdrüssig. Eine
+Daseinsberechtigung von Rechnern ist, Menschen bei solch langweiligen
+Aufgaben zu ersetzen. Lasst uns also Guix die Sache erledigen: Wir lassen
+uns die Paketdefinition eines R-Pakets mit den Informationen aus CRAN holen
+(was zu anderen ausgegeben wird, haben wir im Folgenden weggelassen):
+
+@example
+$ guix import cran --recursive walrus
+
+(define-public r-mc2d
+    ; …
+    (license gpl2+)))
+
+(define-public r-jmvcore
+    ; …
+    (license gpl2+)))
+
+(define-public r-wrs2
+    ; …
+    (license gpl3)))
+
+(define-public r-walrus
+  (package
+    (name "r-walrus")
+    (version "1.0.3")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (cran-uri "walrus" version))
+        (sha256
+          (base32
+            "1nk2glcvy4hyksl5ipq2mz8jy4fss90hx6cq98m3w96kzjni6jjj"))))
+    (build-system r-build-system)
+    (propagated-inputs
+      `(("r-ggplot2" ,r-ggplot2)
+        ("r-jmvcore" ,r-jmvcore)
+        ("r-r6" ,r-r6)
+        ("r-wrs2" ,r-wrs2)))
+    (home-page "https://github.com/jamovi/walrus")
+    (synopsis "Robust Statistical Methods")
+    (description
+      "This package provides a toolbox of common robust statistical
+tests, including robust descriptives, robust t-tests, and robust ANOVA.
+It is also available as a module for 'jamovi' (see
+<https://www.jamovi.org> for more information).  Walrus is based on the
+WRS2 package by Patrick Mair, which is in turn based on the scripts and
+work of Rand Wilcox.  These analyses are described in depth in the book
+'Introduction to Robust Estimation & Hypothesis Testing'.")
+    (license gpl3)))
+@end example
+
+Der rekursive Importer wird keine Pakete importieren, für die es in Guix
+bereits eine Paketdefinition gibt, außer dem Paket, mit dem er anfängt.
+
+Nicht für alle Anwendungen können auf diesem Weg Pakete erzeugt werden, nur
+für jene, die auf ausgewählten Systemen aufbauen. Im Handbuch können Sie
+Informationen über die vollständige Liste aller Importer bekommen (siehe
+@ref{Aufruf von guix import,,, guix.de, Referenzhandbuch zu GNU Guix}).
+
+@node Automatisch aktualisieren
+@subsubsection Automatisch aktualisieren
+
+Guix ist klug genug, um verfügbare Aktualisierungen auf bekannten Systemen
+zu erkennen. Es kann über veraltete Paketdefinitionen Bericht erstatten,
+wenn man dies eingibt:
+
+@example
+$ guix refresh hello
+@end example
+
+In den meisten Fällen muss man zur Aktualisierung auf eine neuere Version
+wenig mehr tun, als die Versionsnummer und die Prüfsumme ändern. Auch das
+kann mit Guix automatisiert werden:
+
+@example
+$ guix refresh hello --update
+@end example
+
+@node Vererbung
+@subsubsection Vererbung
+
+Wenn Sie anfangen, bestehende Paketdefinitionen anzuschauen, könnte es Ihnen
+auffallen, dass viele von ihnen über ein @code{inherit}-Feld verfügen.
+
+@lisp
+(define-public adwaita-icon-theme
+  (package (inherit gnome-icon-theme)
+    (name "adwaita-icon-theme")
+    (version "3.26.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnome/sources/" name "/"
+                                  (version-major+minor version) "/"
+                                  name "-" version ".tar.xz"))
+              (sha256
+               (base32
+                "17fpahgh5dyckgz7rwqvzgnhx53cx9kr2xw0szprc6bnqy977fi8"))))
+    (native-inputs
+     `(("gtk-encode-symbolic-svg" ,gtk+ "bin")))))
+@end lisp
+
+Alle @emph{nicht} aufgeführten Felder werden vom Elternpaket geerbt. Das ist
+ziemlich praktisch, um alternative Pakete zu erzeugen, zum Beispiel solche
+mit geänderten Quellorten, Versionen oder Kompilierungsoptionen.
+
+@node Hilfe bekommen
+@subsection Hilfe bekommen
+
+Leider ist es für manche Anwendungen schwierig, Pakete zu
+schreiben. Manchmal brauchen sie einen Patch, um mit vom Standard
+abweichenden Dateisystemhierarchien klarzukommen, wie sie der Store
+erforderlich macht. Manchmal funktionieren die Tests nicht richtig. (Man
+kann sie überspringen, aber man sollte nicht.) Ein andermal ist das sich
+ergebende Paket nicht reproduzierbar.
+
+Wenn Sie nicht weiterkommen, weil Sie nicht wissen, wie Sie ein Problem beim
+Paketschreiben lösen können, dann zögern Sie nicht, die Gemeinde um Hilfe zu
+bitten.
+
+Siehe die @uref{https://www.gnu.org/software/guix/contact/, Homepage von
+Guix} für Informationen, welche Mailing-Listen, IRC-Kanäle etc.@:
+bereitstehen.
+
+@node Schlusswort
+@subsection Schlusswort
+
+Diese Anleitung hat einen Überblick über die fortgeschrittene
+Paketverwaltung gegeben, die Guix vorweist. Zu diesem Zeitpunkt haben wir
+diese Einführung größtenteils auf das @code{gnu-build-system} eingeschränkt,
+was eine zentrale Abstraktionsschicht darstellt, auf der weitere
+Abstraktionen aufbauen.
+
+Wie geht es nun weiter? Als Nächstes müssten wir das Erstellungssystem in
+seine Bestandteile zerlegen, um einen Einblick ganz ohne Abstraktionen zu
+bekommen. Das bedeutet, wir müssten das @code{trivial-build-system}
+analysieren. Dadurch sollte ein gründliches Verständnis des Prozesses
+vermittelt werden, bevor wir höher entwickelte Paketierungstechniken und
+Randfälle untersuchen.
+
+Andere Funktionalitäten, die es wert sind, erkundet zu werden, sind Guix’
+Funktionalitäten zum interaktiven Editieren und zur Fehlersuche, die die
+REPL von Guile darbietet.
+
+Diese eindrucksvollen Funktionalitäten sind völlig optional und können
+warten; jetzt ist die Zeit für eine wohlverdiente Pause. Mit dem Wissen, in
+das wir hier eingeführt haben, sollten Sie für das Paketieren vieler
+Programme gut gerüstet sein. Sie können gleich anfangen und hoffentlich
+bekommen wir bald Ihre Beiträge zu sehen!
+
+@node Literaturverzeichnis
+@subsection Literaturverzeichnis
+
+@itemize
+@item
+Die @uref{https://guix.gnu.org/manual/de/html_node/Pakete-definieren.html,
+Paketreferenz im Handbuch}
+
+@item
+@uref{https://gitlab.com/pjotrp/guix-notes/blob/master/HACKING.org, Pjotr’s
+Hacking-Leitfaden für GNU Guix}
+
+@item
+@uref{https://www.gnu.org/software/guix/guix-ghm-andreas-20130823.pdf, „GNU
+Guix: Package without a scheme!“} von Andreas Enge
+@end itemize
+
+@c *********************************************************************
+@node Systemkonfiguration
+@chapter Systemkonfiguration
+
+Guix stellt eine flexible Sprache bereit, um Ihr „Guix System“ auf
+deklarative Weise zu konfigurieren. Diese Flexibilität kann einen manchmal
+überwältigen. Dieses Kapitel hat den Zweck, einige fortgeschrittene
+Konfigurationskonzepte vorzuzeigen.
+
+Siehe @ref{Systemkonfiguration,,, guix.de, Referenzhandbuch zu GNU Guix} für
+eine vollständige Referenz.
+
+@menu
+* Den Kernel anpassen::      Einen eigenen Linux-Kernel auf Guix System 
+                               erzeugen und benutzen.
+* Customizing a Window Manager::  Handle customization of a Window manager 
+                                    on Guix System.
+* Setting up a bind mount::  Setting up a bind mount in the file-systems 
+                               definition.
+@end menu
+
+@node Den Kernel anpassen
+@section Den Kernel anpassen
+
+Im Kern ist Guix eine quellcodebasierte Distribution mit Substituten (siehe
+@ref{Substitute,,, guix.de, Referenzhandbuch zu GNU Guix}), daher ist das
+Erstellen von Paketen aus ihrem Quellcode heraus genauso vorgesehen wie die
+normale Installation und Aktualisierung von Paketen. Von diesem Standpunkt
+ist es sinnvoll, zu versuchen, den Zeitaufwand für das Kompilieren von
+Paketen zu senken, und kürzliche Neuerungen sowie Verbesserungen beim
+Erstellen und Verteilen von Substituten bleiben ein Diskussionsthema
+innerhalb von Guix.
+
+Der Kernel braucht zwar keine übermäßigen Mengen an Arbeitsspeicher beim
+Erstellen, jedoch jede Menge Zeit auf einer durchschnittlichen Maschine. Die
+offizielle Konfiguration des Kernels umfasst, wie bei anderen
+GNU/Linux-Distributionen auch, besser zu viel als zu wenig. Das ist der
+eigentliche Grund, warum seine Erstellung so lange dauert, wenn man den
+Kernel aus dem Quellcode heraus erstellt.
+
+Man kann den Linux-Kernel jedoch auch als ganz normales Paket beschreiben,
+das genau wie jedes andere Paket angepasst werden kann. Der Vorgang ist ein
+klein wenig anders, aber das liegt hauptsächlich an der Art, wie die
+Paketdefinition geschrieben ist.
+
+Die @code{linux-libre}-Kernelpaketdefinition ist tatsächlich eine Prozedur,
+die ein Paket liefert.
+
+@lisp
+(define* (make-linux-libre version hash supported-systems
+                           #:key
+                           ;; A function that takes an arch and a variant.
+                           ;; See kernel-config for an example.
+                           (extra-version #f)
+                           (configuration-file #f)
+                           (defconfig "defconfig")
+                           (extra-options %default-extra-linux-options)
+                           (patches (list %boot-logo-patch)))
+  ...)
+@end lisp
+
+Das momentane @code{linux-libre}-Paket zielt ab auf die 5.1.x-Serie und ist
+wie folgt deklariert:
+
+@lisp
+(define-public linux-libre
+  (make-linux-libre %linux-libre-version
+                    %linux-libre-hash
+                    '("x86_64-linux" "i686-linux" "armhf-linux" "aarch64-linux")
+                    #:patches %linux-libre-5.1-patches
+                    #:configuration-file kernel-config))
+@end lisp
+
+Alle Schlüssel, denen kein Wert zugewiesen wird, erben ihren Vorgabewert von
+der Definition von @code{make-linux-libre}. Wenn Sie die beiden Schnipsel
+oben vergleichen, könnte Ihnen auffallen, dass sich der Code-Kommentar in
+ersterem tatsächlich @emph{nicht} auf das
+@code{#:extra-version}-Schlüsselwort bezieht, sondern auf
+@code{#:configuration-file}. Deswegen ist es nicht so leicht, aus der
+Definition heraus eine eigene Kernel-Konfiguration anhand der Definition zu
+schreiben, aber keine Sorge, es gibt andere Möglichkeiten, um mit dem zu
+arbeiten, was uns gegeben wurde.
+
+Es gibt zwei Möglichkeiten, einen Kernel mit eigener Kernel-Konfiguration zu
+erzeugen. Die erste ist, eine normale @file{.config}-Datei als native
+Eingabe zu unserem angepassten Kernel hinzuzufügen. Im Folgenden sehen Sie
+ein Schnipsel aus der angepassten @code{'configure}-Phase der
+@code{make-linux-libre}-Paketdefinition:
+
+@lisp
+(let ((build  (assoc-ref %standard-phases 'build))
+      (config (assoc-ref (or native-inputs inputs) "kconfig")))
+
+  ;; Use a custom kernel configuration file or a default
+  ;; configuration file.
+  (if config
+      (begin
+        (copy-file config ".config")
+        (chmod ".config" #o666))
+      (invoke "make" ,defconfig))
+@end lisp
+
+Nun folgt ein Beispiel-Kernel-Paket. Das @code{linux-libre}-Paket ist nicht
+anders als andere Pakete und man kann von ihm erben und seine Felder
+ersetzen wie bei jedem anderen Paket.
+
+@lisp
+(define-public linux-libre/E2140
+  (package
+    (inherit linux-libre)
+    (native-inputs
+     `(("kconfig" ,(local-file "E2140.config"))
+      ,@@(alist-delete "kconfig"
+                      (package-native-inputs linux-libre))))))
+@end lisp
+
+Im selben Verzeichnis wie die Datei, die @code{linux-libre-E2140} definiert,
+befindet sich noch eine Datei namens @file{E2140.config}, bei der es sich um
+eine richtige Kernel-Konfigurationsdatei handelt. Das Schlüsselwort
+@code{defconfig} von @code{make-linux-libre} wird hier leer gelassen, so
+dass die einzige Kernel-Konfiguration im Paket die im
+@code{native-inputs}-Feld ist.
+
+Die zweite Möglichkeit, einen eigenen Kernel zu erzeugen, ist, einen neuen
+Wert an das @code{extra-options}-Schlüsselwort der
+@code{make-linux-libre}-Prozedur zu übergeben. Das
+@code{extra-options}-Schlüsselwort wird zusammen mit einer anderen, direkt
+darunter definierten Funktion benutzt:
+
+@lisp
+(define %default-extra-linux-options
+  `(;; https://lists.gnu.org/archive/html/guix-devel/2014-04/msg00039.html
+   ("CONFIG_DEVPTS_MULTIPLE_INSTANCES" . #t)
+   ;; Modules required for initrd:
+   ("CONFIG_NET_9P" . m)
+   ("CONFIG_NET_9P_VIRTIO" . m)
+   ("CONFIG_VIRTIO_BLK" . m)
+   ("CONFIG_VIRTIO_NET" . m)
+   ("CONFIG_VIRTIO_PCI" . m)
+   ("CONFIG_VIRTIO_BALLOON" . m)
+   ("CONFIG_VIRTIO_MMIO" . m)
+   ("CONFIG_FUSE_FS" . m)
+   ("CONFIG_CIFS" . m)
+   ("CONFIG_9P_FS" . m)))
+
+(define (config->string options)
+  (string-join (map (match-lambda
+                      ((option . 'm)
+                       (string-append option "=m"))
+                      ((option . #t)
+                       (string-append option "=y"))
+                      ((option . #f)
+                       (string-append option "=n")))
+                    options)
+               "\n"))
+@end lisp
+
+Und im eigenen configure-Skript des „make-linux-libre“-Pakets:
+
+@lisp
+;; Appending works even when the option wasn't in the
+;; file.  The last one prevails if duplicated.
+(let ((port (open-file ".config" "a"))
+      (extra-configuration ,(config->string extra-options)))
+  (display extra-configuration port)
+  (close-port port))
+
+(invoke "make" "oldconfig"))))
+@end lisp
+
+Indem wir also kein „configuration-file“ mitgeben, ist @file{.config}
+anfangs leer und danach schreiben wir dort die Sammlung der gewünschten
+Optionen („Flags“) hinein. Hier ist noch ein eigener Kernel:
+
+@lisp
+(define %macbook41-full-config
+  (append %macbook41-config-options
+          %filesystems
+          %efi-support
+          %emulation
+          (@@@@ (gnu packages linux) %default-extra-linux-options)))
+
+(define-public linux-libre-macbook41
+  ;; XXX: Auf die interne 'make-linux-libre'-Prozedur zugreifen, welche privat
+  ;; ist und nicht exportiert, desweiteren kann sie sich in Zukunft ändern.
+  ((@@@@ (gnu packages linux) make-linux-libre) (@@@@ (gnu packages linux) %linux-libre-version)
+                      (@@@@ (gnu packages linux) %linux-libre-hash)
+                      '("x86_64-linux")
+                      #:extra-version "macbook41"
+                      #:patches (@@@@ (gnu packages linux) %linux-libre-5.1-patches)
+                      #:extra-options %macbook41-config-options))
+@end lisp
+
+Im obigen Beispiel ist @code{%filesystems} eine Sammlung solcher „Flags“,
+mit denen Unterstützung für verschiedene Dateisysteme aktiviert wird,
+@code{%efi-support} aktiviert Unterstützung für EFI und @code{%emulation}
+ermöglicht es einer x86_64-linux-Maschine, auch im 32-Bit-Modus zu
+arbeiten. Die @code{%default-extra-linux-options} sind die oben zitierten,
+die wieder hinzugefügt werden mussten, weil sie durch das
+@code{extra-options}-Schlüsselwort ersetzt worden waren.
+
+All das klingt machbar, aber woher weiß man überhaupt, welche Module für ein
+bestimmtes System nötig sind? Es gibt zwei hilfreiche Anlaufstellen, zum
+einen das
+@uref{https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Kernel,
+Gentoo-Handbuch}, zum anderen die
+@uref{https://www.kernel.org/doc/html/latest/admin-guide/README.html?highlight=localmodconfig,
+Dokumentation des Kernels selbst}. Aus der Kernel-Dokumentation erfahren
+wir, dass @code{make localmodconfig} der Befehl sein könnte, den wir wollen.
+
+Um @code{make localmodconfig} auch tatsächlich ausführen zu können, müssen
+wir zunächst den Quellcode des Kernels holen und entpacken:
+
+@example shell
+tar xf $(guix build linux-libre --source)
+@end example
+
+Sobald wir im Verzeichnis mit dem Quellcode sind, führen Sie @code{touch
+.config} aus, um mit einer ersten, leeren @file{.config}
+anzufangen. @code{make localmodconfig} funktioniert so, dass angeschaut
+wird, was bereits in Ihrer @file{.config} steht, und Ihnen mitgeteilt wird,
+was Ihnen noch fehlt. Wenn die Datei leer bleibt, fehlt eben alles. Der
+nächste Schritt ist, das hier auszuführen:
+
+@example shell
+guix environment linux-libre -- make localmodconfig
+@end example
+
+und uns die Ausgabe davon anzuschauen. Beachten Sie, dass die
+@file{.config}-Datei noch immer leer ist. Die Ausgabe enthält im Allgemeinen
+zwei Arten von Warnungen. Am Anfang der ersten steht „WARNING“ und in
+unserem Fall können wir sie tatsächlich ignorieren. Bei der zweiten heißt
+es:
+
+@example shell
+module pcspkr did not have configs CONFIG_INPUT_PCSPKR
+@end example
+
+Für jede solche Zeile kopieren Sie den @code{CONFIG_XXXX_XXXX}-Teil in die
+@file{.config} im selben Verzeichnis und hängen @code{=m} an, damit es am
+Ende so aussieht:
+
+@example shell
+CONFIG_INPUT_PCSPKR=m
+CONFIG_VIRTIO=m
+@end example
+
+Nachdem Sie alle Konfigurationsoptionen kopiert haben, führen Sie noch
+einmal @code{make localmodconfig} aus, um sicherzugehen, dass es keine
+Ausgaben mehr gibt, deren erstes Wort „module“ ist. Zusätzlich zu diesen
+maschinenspezifischen Modulen gibt es noch ein paar mehr, die Sie auch
+brauchen. @code{CONFIG_MODULES} brauchen Sie, damit Sie Module getrennt
+erstellen und laden können und nicht alles im Kernel eingebaut sein
+muss. Sie brauchen auch @code{CONFIG_BLK_DEV_SD}, um von Festplatten lesen
+zu können. Möglicherweise gibt es auch sonst noch Module, die Sie brauchen
+werden.
+
+Die Absicht hinter dem hier Niedergeschriebenen ist @emph{nicht}, eine
+Anleitung zum Konfigurieren eines eigenen Kernels zu sein. Wenn Sie also
+vorhaben, den Kernel an Ihre ganz eigenen Bedürfnisse anzupassen, werden Sie
+in anderen Anleitungen fündig.
+
+Die zweite Möglichkeit, die Kernel-Konfiguration einzurichten, benutzt mehr
+von Guix’ Funktionalitäten und sie ermöglicht es Ihnen, Gemeinsamkeiten von
+Konfigurationen zwischen verschiedenen Kernels zu teilen. Zum Beispiel wird
+eine Reihe von EFI-Konfigurationsoptionen von allen Maschinen, die EFI
+benutzen, benötigt. Wahrscheinlich haben all diese Kernel eine Schnittmenge
+zu unterstützender Dateisysteme. Indem Sie Variable benutzen, können Sie
+leicht auf einen Schlag sehen, welche Funktionalitäten aktiviert sind, und
+gleichzeitig sicherstellen, dass Ihnen nicht Funktionalitäten des einen
+Kernels im anderen fehlen.
+
+Was wir hierbei nicht erläutert haben, ist, wie Guix’ initrd und dessen
+Anpassung funktioniert. Wahrscheinlich werden Sie auf einer Maschine mit
+eigenem Kernel die initrd verändern müssen, weil sonst versucht wird,
+bestimmte Module in die initrd einzubinden, die Sie gar nicht erstellen
+haben lassen.
+
+@node Customizing a Window Manager
+@section Customizing a Window Manager
+@cindex wm
+
+@node StumpWM
+@subsection StumpWM
+@cindex stumpwm
+
+You could install StumpWM with a Guix system by adding @code{stumpwm} and
+optionally @code{`(,stumpwm "lib")} packages to a system configuration file,
+e.g.@: @file{/etc/config.scm}.
+
+An example configuration can look like this:
+
+@lisp
+(use-modules (gnu))
+(use-package-modules wm)
+
+(operating-system
+  ;; …
+  (packages (append (list sbcl stumpwm `(,stumpwm "lib"))
+                    %base-packages)))
+@end lisp
+
+@cindex stumpwm fonts
+By default StumpWM uses X11 fonts, which could be small or pixelated on your
+system.  You could fix this by installing StumpWM contrib Lisp module
+@code{sbcl-ttf-fonts}, adding it to Guix system packages:
+
+@lisp
+(use-modules (gnu))
+(use-package-modules fonts wm)
+
+(operating-system
+  ;; …
+  (packages (append (list sbcl stumpwm `(,stumpwm "lib"))
+                    sbcl-ttf-fonts font-dejavu %base-packages)))
+@end lisp
+
+Then you need to add the following code to a StumpWM configuration file
+@file{~/.stumpwm.d/init.lisp}:
+
+@lisp
+(require :ttf-fonts)
+(setf xft:*font-dirs* '("/run/current-system/profile/share/fonts/"))
+(setf clx-truetype:+font-cache-filename+ (concat (getenv "HOME") "/.fonts/font-cache.sexp"))
+(xft:cache-fonts)
+(set-font (make-instance 'xft:font :family "DejaVu Sans Mono" :subfamily "Book" :size 11))
+@end lisp
+
+@node Session lock
+@subsection Session lock
+@cindex sessionlock
+
+Depending on your environment, locking the screen of your session might come
+built in or it might be something you have to set up yourself. If you use a
+desktop environment like GNOME or KDE, it's usually built in. If you use a
+plain window manager like StumpWM or EXWM, you might have to set it up
+yourself.
+
+@node Xorg
+@subsubsection Xorg
+
+If you use Xorg, you can use the utility
+@uref{https://www.mankier.com/1/xss-lock, xss-lock} to lock the screen of
+your session.  xss-lock is triggered by DPMS which since Xorg 1.8 is
+auto-detected and enabled if ACPI is also enabled at kernel runtime.
+
+To use xss-lock, you can simple execute it and put it into the background
+before you start your window manager from e.g. your @file{~/.xsession}:
+
+@example
+xss-lock -- slock &
+exec stumpwm
+@end example
+
+In this example, xss-lock uses @code{slock} to do the actual locking of the
+screen when it determines it's appropriate, like when you suspend your
+device.
+
+For slock to be allowed to be a screen locker for the graphical session, it
+needs to be made setuid-root so it can authenticate users, and it needs a
+PAM service. This can be achieved by adding the following service to your
+@file{config.scm}:
+
+@lisp
+(screen-locker-service slock)
+@end lisp
+
+If you manually lock your screen, e.g. by directly calling slock when you
+want to lock your screen but not suspend it, it's a good idea to notify
+xss-lock about this so no confusion occurs. This can be done by executing
+@code{xset s activate} immediately before you execute slock.
+
+@node Setting up a bind mount
+@section Setting up a bind mount
+
+To bind mount a file system, one must first set up some definitions before
+the @code{operating-system} section of the system definition.  In this
+example we will bind mount a folder from a spinning disk drive to
+@file{/tmp}, to save wear and tear on the primary SSD, without dedicating an
+entire partition to be mounted as @file{/tmp}.
+
+First, the source drive that hosts the folder we wish to bind mount should
+be defined, so that the bind mount can depend on it.
+
+@lisp
+(define source-drive ;; "source-drive" can be named anything you want.
+   (file-system
+    (device (uuid "UUID goes here"))
+    (mount-point "/path-to-spinning-disk-goes-here")
+    (type "ext4"))) ;; Make sure to set this to the appropriate type for your drive.
+@end lisp
+
+The source folder must also be defined, so that guix will know it's not a
+regular block device, but a folder.
+@lisp
+(define (%source-directory) "/path-to-spinning-disk-goes-here/tmp") ;; "source-directory" can be named any valid variable name.
+@end lisp
+
+Finally, inside the @code{file-systems} definition, we must add the mount
+itself.
+
+@lisp
+(file-systems (cons*
+
+                ...<other drives omitted for clarity>...
+
+                source-drive ;; Must match the name you gave the source drive in the earlier definition.
+
+                (file-system
+                 (device (%source-directory)) ;; Make sure "source-directory" matches your earlier definition.
+                 (mount-point "/tmp")
+                 (type "none") ;; We are mounting a folder, not a partition, so this type needs to be "none"
+                 (flags '(bind-mount))
+                 (dependencies (list source-drive)) ;; Ensure "source-drive" matches what you've named the variable for the drive.
+                 )
+
+                 ...<other drives omitted for clarity>...
+
+                ))
+@end lisp
+
+@c *********************************************************************
+@node Fortgeschrittene Paketverwaltung
+@chapter Fortgeschrittene Paketverwaltung
+
+Guix ist ein funktionales Paketverwaltungsprogramm, das weit mehr
+Funktionalitäten als traditionelle Paketverwalter anbietet. Für nicht
+Eingeweihte sind deren Anwendungsfälle nicht sofort ersichtlich. Dieses
+Kapitel ist dazu da, manche fortgeschrittenen Paketverwaltungskonzepte zu
+demonstrieren.
+
+Siehe @ref{Paketverwaltung,,, guix.de, Referenzhandbuch zu GNU Guix} für
+eine vollständige Referenz.
+
+@menu
+* Guix-Profile in der Praxis::  Strategien für mehrere Profile und 
+                                  Manifeste.
+@end menu
+
+@node Guix-Profile in der Praxis
+@section Guix-Profile in der Praxis
+
+Guix gibt uns eine sehr nützliche Funktionalität, die Neuankömmlingen sehr
+fremd sein dürfte: @emph{Profile}. Mit ihnen kann man Paketinstallationen
+zusammenfassen und jeder Benutzer desselben Systems kann so viele davon
+anlegen, wie sie oder er möchte.
+
+Ob Sie ein Entwickler sind oder nicht, Sie dürften feststellen, dass mehrere
+Profile ein mächtiges Werkzeug sind, das Sie flexibler macht. Zwar ist es
+ein gewisser Paradigmenwechsel verglichen mit @emph{traditioneller
+Paketverwaltung}, doch sind sie sehr praktisch, sobald man im Umgang mit
+ihnen den Dreh ’raushat.
+
+Wenn Ihnen Pythons @samp{virtualenv} vertraut ist, können Sie sich ein
+Profil als eine Art universelles @samp{virtualenv} vorstellen, das jede Art
+von Software enthalten kann und nicht nur Python-Software. Desweiteren sind
+Profile selbstversorgend: Sie schließen alle Laufzeitabhängigkeiten ein und
+garantieren somit, dass alle Programme innerhalb eines Profils stets zu
+jeder Zeit funktionieren werden.
+
+Mehrere Profile bieten viele Vorteile:
+
+@itemize
+@item
+Klare semantische Trennung der verschiedenen Pakete, die ein Nutzer für
+verschiedene Kontexte braucht.
+
+@item
+Mehrere Profile können in der Umgebung verfügbar gemacht werden, entweder
+beim Anmelden oder in einer eigenen Shell.
+
+@item
+Profile können bei Bedarf geladen werden. Zum Beispiel kann der Nutzer
+mehrere Unter-Shells benutzen, von denen jede ein anderes Profil ausführt.
+
+@item
+Isolierung: Programme aus dem einen Profil werden keine Programme aus dem
+anderen benutzen, und der Nutzer kann sogar verschiedene Versionen desselben
+Programms in die zwei Profile installieren, ohne dass es zu Konflikten
+kommt.
+
+@item
+Deduplizierung: Profile teilen sich Abhängigkeiten, wenn sie genau gleich
+sind. Dadurch sind mehrere Profile speichereffizient.
+
+@item
+Reproduzierbar: Wenn man dafür deklarative Manifeste benutzt, kann ein
+Profil allein durch den bei dessen Einrichtung aktiven Guix-Commit eindeutig
+spezifiziert werden. Das bedeutet, dass man genau dasselbe Profil
+@uref{https://guix.gnu.org/blog/2018/multi-dimensional-transactions-and-rollbacks-oh-my/,
+jederzeit und überall einrichten kann} und man dafür nur die
+Commit-Informationen braucht. Siehe den Abschnitt über @ref{Reproduzierbare
+Profile}.
+
+@item
+Leichtere Aktualisierung und Wartung: Mit mehreren Profilen ist es ein
+Leichtes, eine Liste von Paketen zur Hand zu haben und Aktualisierungen
+völlig reibungslos ablaufen zu lassen.
+@end itemize
+
+Konkret wären diese hier typische Profile:
+
+@itemize
+@item
+Die Abhängigkeiten des Projekts, an dem Sie arbeiten.
+
+@item
+Die Bibliotheken Ihrer Lieblingsprogrammiersprache.
+
+@item
+Programme nur für Laptops (wie @samp{powertop}), für die Sie auf einem
+„Desktop“-Rechner keine Verwendung haben.
+
+@item
+@TeX{}live (das kann wirklich praktisch sein, wenn Sie nur ein einziges
+Paket für dieses eine Dokument installieren müssen, das Ihnen jemand in
+einer E-Mail geschickt hat).
+
+@item
+Spiele.
+@end itemize
+
+Tauchen wir ein in deren Einrichtung!
+
+@node Grundlegende Einrichtung über Manifeste
+@subsection Grundlegende Einrichtung über Manifeste
+
+Ein Guix-Profil kann über eine sogenannte @emph{Manifest-Spezifikation}
+eingerichtet werden. Das sieht etwa so aus:
+
+@lisp
+(specifications->manifest
+  '("paket-1"
+    ;; Version 1.3 von paket-2.
+    "paket-2@@1.3"
+    ;; Die "lib"-Ausgabe von paket-3.
+    "paket-3:lib"
+    ; …
+    "paket-N"))
+@end lisp
+
+Siehe @ref{Aufruf von guix package,,, guix.de, Referenzhandbuch zu GNU
+Guix}, für Details zur Syntax.
+
+Wir können eine Manifestspezifikation für jedes Profil schreiben und es auf
+diese Weise installieren:
+
+@example
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+mkdir -p "$GUIX_EXTRA_PROFILES"/my-project # wenn es noch nicht existiert
+guix package --manifest=/pfad/zu/guix-my-project-manifest.scm --profile="$GUIX_EXTRA_PROFILES"/my-project/my-project
+@end example
+
+Hierbei haben wir eine beliebig benannte Variable @samp{GUIX_EXTRA_PROFILES}
+eingerichtet, die auf das Verzeichnis verweist, wo wir unsere Profile für
+den Rest dieses Artikels speichern wollen.
+
+Placing all your profiles in a single directory, with each profile getting
+its own sub-directory, is somewhat cleaner.  This way, each sub-directory
+will contain all the symlinks for precisely one profile.  Besides, ``looping
+over profiles'' becomes obvious from any programming language (e.g.@: a
+shell script) by simply looping over the sub-directories of
+@samp{$GUIX_EXTRA_PROFILES}.
+
+Beachten Sie, dass man auch eine Schleife über die Ausgabe von
+
+@example
+guix package --list-profiles
+@end example
+
+although you'll probably have to filter out @file{~/.config/guix/current}.
+
+To enable all profiles on login, add this to your @file{~/.bash_profile} (or
+similar):
+
+@example
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+@end example
+
+Note to Guix System users: the above reflects how your default profile
+@file{~/.guix-profile} is activated from @file{/etc/profile}, that latter
+being loaded by @file{~/.bashrc} by default.
+
+Selbstverständlich können Sie sich auch dafür entscheiden, nur eine
+Teilmenge zu aktivieren:
+
+@example
+for i in "$GUIX_EXTRA_PROFILES"/my-project-1 "$GUIX_EXTRA_PROFILES"/my-project-2; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+@end example
+
+Wenn ein Profil abgeschaltet ist, lässt es sich mit Leichtigkeit für eine
+bestimmte Shell aktivieren, ohne die restliche Benutzersitzung zu
+„verschmutzen“:
+
+@example
+GUIX_PROFILE="pfad/zu/my-project" ; . "$GUIX_PROFILE"/etc/profile
+@end example
+
+Der Schlüssel dazu, wie man ein Profil aktiviert, ist dessen
+@samp{etc/profile}-Datei mit @command{source} zu laden. Diese Datei enthält
+einige Shell-Befehle, um die für das Aktivieren der Software im Profil
+nötigen Umgebungsvariablen zu exportieren. Die Datei wird durch Guix
+automatisch erzeugt, um mit @command{source} eingelesen zu werden. Sie
+enthält dieselben Variablen, die Sie nach Ausführung dieses Befehls bekämen:
+
+@example
+guix package --search-paths=prefix --profile=$my_profile"
+@end example
+
+Siehe auch hier das @ref{Aufruf von guix package,,, guix.de,
+Referenzhandbuch zu GNU Guix} für die Befehlszeilenoptionen.
+
+Um ein Profil zu aktualisieren, installieren Sie das Manifest einfach
+nochmal:
+
+@example
+guix package -m /pfad/zu/guix-my-project-manifest.scm -p "$GUIX_EXTRA_PROFILES"/my-project/my-project
+@end example
+
+To upgrade all profiles, it's easy enough to loop over them.  For instance,
+assuming your manifest specifications are stored in
+@file{~/.guix-manifests/guix-$profile-manifest.scm}, with @samp{$profile}
+being the name of the profile (e.g.@: "project1"), you could do the
+following in Bourne shell:
+
+@example
+for profile in "$GUIX_EXTRA_PROFILES"/*; do
+  guix package --profile="$profile" --manifest="$HOME/.guix-manifests/guix-$profile-manifest.scm"
+done
+@end example
+
+Jedes Profil verfügt über seine eigenen Generationen:
+
+@example
+guix package -p "$GUIX_EXTRA_PROFILES"/my-project/my-project --list-generations
+@end example
+
+Sie können es auf jede Generation zurücksetzen:
+
+@example
+guix package -p "$GUIX_EXTRA_PROFILES"/my-project/my-project --switch-generations=17
+@end example
+
+Zu guter Letzt ist es möglich, zu einem Profil zu wechseln ohne die aktuelle
+Umgebung zu erben, indem Sie es aus einer leeren Shell heraus aktivieren:
+
+@example
+env -i $(which bash) --login --noprofile --norc
+. my-project/etc/profile
+@end example
+
+@node Die nötigen Pakete
+@subsection Die nötigen Pakete
+
+Das Aktivieren eines Profils bedeutet im Grunde, dass eine Menge
+Umgebungsvariabler exportiert wird. Diese Rolle fällt der
+@samp{etc/profile}-Datei innerhalb des Profils zu.
+
+@emph{Anmerkung: Nur diejenigen Umgebungsvariablen der sie gebrauchenden Pakete
+werden gesetzt.}
+
+Zum Beispiel wird kein @samp{MANPATH} gesetzt sein, wenn keine Anwendung im
+Profil diese „Man-Pages“ (Handbuchseiten) gebraucht. Wenn Sie also
+transparenten Zugriff auf Handbuchseiten brauchen, nachdem das Profil
+geladen wurde, dann gibt es zwei Möglichkeiten:
+
+@itemize
+@item
+Entweder Sie exportieren die Variablen von Hand, z.B.
+@example
+export MANPATH=/path/to/profile$@{MANPATH:+:@}$MANPATH
+@end example
+
+@item
+Oder Sie schreiben @samp{man-db} in das Profilmanifest hinein.
+@end itemize
+
+Das Gleiche gilt für @samp{INFOPATH} (Sie können @samp{info-reader}
+installieren), @samp{PKG_CONFIG_PATH} (installieren Sie @samp{pkg-config}),
+etc.
+
+@node Vorgabeprofil
+@subsection Vorgabeprofil
+
+What about the default profile that Guix keeps in @file{~/.guix-profile}?
+
+Sie können ihm die Rolle zuweisen, die Sie wollen. Normalerweise würden Sie
+das Manifest derjenigen Pakete installieren, die Sie ständig benutzen
+möchten.
+
+Alternatively, you could keep it ``manifest-less'' for throw-away packages
+that you would just use for a couple of days.  This way makes it convenient
+to run
+
+@example
+guix install paket-foo
+guix upgrade paket-bar
+@end example
+
+auszuführen ohne den Pfad zu einem Profil festzulegen.
+
+@node Der Vorteil von Manifesten
+@subsection Der Vorteil von Manifesten
+
+Manifeste sind eine bequeme Art, Ihre Paketlisten zur Hand zu haben und
+diese z.B.@: über mehrere Maschinen hinweg in einem Versionskontrollsystem
+zu synchronisieren.
+
+Eine oft gehörte Beschwerde über Manifeste ist, dass es lange dauert, sie zu
+installieren, wenn sie viele Pakete enthalten. Das ist besonders hinderlich,
+wenn Sie nur ein einziges Paket in ein großes Manifest installieren möchten.
+
+Das ist ein weiteres Argument dafür, mehrere Profile zu benutzen, denn es
+stellt sich heraus, dass dieses Vorgehen perfekt für das Aufbrechen von
+Manifesten in mehrere Mengen semantisch verbundener Pakete geeignet ist. Mit
+mehreren, kleinen Profilen haben Sie mehr Flexibilität und
+Benutzerfreundlichkeit.
+
+Manifeste haben mehrere Vorteile. Insbesondere erleichtern sie die Wartung.
+
+@itemize
+@item
+When a profile is set up from a manifest, the manifest itself is
+self-sufficient to keep a ``package listing'' around and reinstall the
+profile later or on a different system.  For ad-hoc profiles, we would need
+to generate a manifest specification manually and maintain the package
+versions for the packages that don't use the default version.
+
+@item
+Bei @code{guix package --upgrade} wird immer versucht, die Pakete zu
+aktualisieren, die propagierte Eingaben haben, selbst wenn es nichts zu tun
+gibt. Mit Guix-Manifesten fällt dieses Problem weg.
+
+@item
+Wenn man nur Teile eines Profils aktualisiert, kann es zu Konflikten kommen
+(weil die Abhängigkeiten zwischen aktualisierten und nicht aktualisierten
+Paketen voneinander abweichen), und es kann mühsam sein, diese Konflikte von
+Hand aufzulösen. Manifeste haben kein solches Problem, weil alle Pakete
+immer gleichzeitig aktualisiert werden.
+
+@item
+Wie zuvor erwähnt, gewähren einem Manifeste reproduzierbare Profile, während
+die imperativen @code{guix install}, @code{guix upgrade}, etc.@: das nicht
+tun, weil sie jedes Mal ein anderes Profil ergeben, obwohl sie dieselben
+Pakete enthalten. Siehe die @uref{https://issues.guix.gnu.org/issue/33285,
+dieses Thema betreffende Diskussion}.
+
+@item
+Manifestspezifikationen können von anderen @samp{guix}-Befehlen benutzt
+werden. Zum Beispiel können Sie @code{guix weather -m manifest.scm}
+ausführen, um zu sehen, wieviele Substitute verfügbar sind, was Ihnen bei
+der Entscheidung helfen kann, ob Sie heute schon eine Aktualisierung
+durchführen oder lieber noch eine Weile warten möchten. Ein anderes
+Beispiel: Sie können mit @code{guix pack -m manifest.scm} ein Bündel
+erzeugen, das alle Pakete im Manifest enthält (mitsamt derer transitiven
+Referenzen).
+
+@item
+Zuletzt haben Manifeste auch eine Repräsentation in Scheme, nämlich den
+@samp{<manifest>}-Verbundstyp. Sie können in Scheme verarbeitet werden und
+an die verschiedenen
+@uref{https://de.wikipedia.org/wiki/Programmierschnittstelle,
+Guix-Programmierschnittstellen (APIs)} übergeben werden.
+@end itemize
+
+It's important to understand that while manifests can be used to declare
+profiles, they are not strictly equivalent: profiles have the side effect
+that they ``pin'' packages in the store, which prevents them from being
+garbage-collected (@pxref{Invoking guix gc,,, guix, GNU Guix Reference
+Manual})  and ensures that they will still be available at any point in the
+future.
+
+Schauen wir uns ein Beispiel an:
+
+@enumerate
+@item
+Wir haben eine Umgebung, in der wir an einem Projekt hacken können, für das
+es noch kein Guix-Paket gibt. Wir richten die Umgebung mit einem Manifest
+ein und führen dann @code{guix environment -m manifest.scm} aus. So weit so
+gut.
+
+@item
+Nach vielen Wochen haben wir in der Zwischenzeit schon ein paarmal
+@code{guix pull} laufen lassen. Vielleicht wurde eine Abhängigkeit aus
+unserem Manifest aktualisiert oder wir könnten @code{guix gc} ausgeführt
+haben, so dass manche Pakete, die von unserem Manifest gebraucht würden, vom
+Müllsammler geholt worden sind.
+
+@item
+Schließlich fangen wir wieder an, an dem Projekt zu arbeiten, also fÜhren
+wir @code{guix environment -m manifest.scm} aus. Aber jetzt müssen wir
+warten, bis Guix lauter Dinge erstellt und installiert hat!
+@end enumerate
+
+Ideal wäre es, wenn wir uns die Zeit für die Neuerstellung sparen
+könnten. Und das können wir auch: Alles, was wir brauchen, ist, das Manifest
+in ein Profil zu installieren und @code{GUIX_PROFILE=/das/profil;
+. "$GUIX_PROFILE"/etc/profile} aufzurufen, wie oben erklärt. Dadurch haben
+wir die Garantie, dass unsere Hacking-Umgebung jederzeit zur Verfügung
+steht.
+
+@emph{Sicherheitswarnung:} Obwohl es angenehm sein kann, alte Profile zu
+behalten, sollten Sie daran denken, dass veraltete Pakete @emph{nicht} über
+die neuesten Sicherheitsbehebungen verfügen.
+
+@node Reproduzierbare Profile
+@subsection Reproduzierbare Profile
+
+Um ein Profil Bit für Bit nachzubilden, brauchen wir zweierlei
+Informationen:
+
+@itemize
+@item
+ein Manifest und
+@item
+eine Kanalspezifikation für Guix.
+@end itemize
+
+Tatsächlich kann es vorkommen, dass ein Manifest allein nicht genug ist:
+Verschiedene Versionen von Guix (oder andere Kanäle) können beim selben
+Manifest zu verschiedenen Ausgaben führen.
+
+Sie können sich die Guix-Kanalspezifikationen mit @samp{guix describe
+--format=channels} ausgeben lassen. Speichern Sie sie in eine Datei ab,
+sagen wir @samp{channel-specs.scm}.
+
+Auf einem anderen Rechner können Sie die Kanalspezifikationsdatei und das
+Manifest benutzen, um genau dasselbe Profil zu reproduzieren:
+
+@example
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+GUIX_EXTRA=$HOME/.guix-extra
+
+mkdir "$GUIX_EXTRA"/my-project
+guix pull --channels=channel-specs.scm --profile "$GUIX_EXTRA/my-project/guix"
+
+mkdir -p "$GUIX_EXTRA_PROFILES/my-project"
+"$GUIX_EXTRA"/my-project/guix/bin/guix package --manifest=/path/to/guix-my-project-manifest.scm --profile="$GUIX_EXTRA_PROFILES"/my-project/my-project
+@end example
+
+Es kann nichts Schlimmes passieren, wenn Sie das Guix-Kanalprofil, das Sie
+eben aus der Kanalspezifikation erstellt haben, löschen, denn das
+Projektprofil hängt davon nicht ab.
+
+@c *********************************************************************
+@node Danksagungen
+@chapter Danksagungen
+
+Guix baut auf dem @uref{https://nixos.org/nix/,
+Nix-Paketverwaltungsprogramm} auf, das von Eelco Dolstra entworfen und
+entwickelt wurde, mit Beiträgen von anderen Leuten (siehe die Datei
+@file{nix/AUTHORS} in Guix). Nix hat für die funktionale Paketverwaltung die
+Pionierarbeit geleistet und noch nie dagewesene Funktionalitäten
+vorangetrieben wie transaktionsbasierte Paketaktualisierungen und die
+Rücksetzbarkeit selbiger, eigene Paketprofile für jeden Nutzer und
+referenziell transparente Erstellungsprozesse. Ohne diese Arbeit gäbe es
+Guix nicht.<
+
+Die Nix-basierten Software-Distributionen Nixpkgs und NixOS waren auch eine
+Inspiration für Guix.
+
+GNU@tie{}Guix ist selbst das Produkt kollektiver Arbeit mit Beiträgen durch
+eine Vielzahl von Leuten. Siehe die Datei @file{AUTHORS} in Guix für mehr
+Informationen, wer diese wunderbaren Menschen sind. In der Datei
+@file{THANKS} finden Sie eine Liste der Leute, die uns geholfen haben, indem
+Sie Fehler gemeldet, sich um unsere Infrastruktur gekümmert, künstlerische
+Arbeit und schön gestaltete Themen beigesteuert, Vorschläge gemacht und noch
+vieles mehr getan haben — vielen Dank!
+
+Dieses Dokument enthält angepasste Abschnitte aus Einträgen, die zuvor auf
+dem Blog von Guix unter @uref{https://guix.gnu.org/blog} veröffentlicht
+wurden.
+
+
+@c *********************************************************************
+@node GNU-Lizenz für freie Dokumentation
+@appendix GNU-Lizenz für freie Dokumentation
+@cindex Lizenz, GNU-Lizenz für freie Dokumentation
+@include fdl-1.3.texi
+
+@c *********************************************************************
+@node Konzeptverzeichnis
+@unnumbered Konzeptverzeichnis
+@printindex cp
+
+@bye
+
+@c Local Variables:
+@c ispell-local-dictionary: "american";
+@c End:

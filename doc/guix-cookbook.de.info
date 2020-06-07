@@ -1,0 +1,2760 @@
+This is guix-cookbook.de.info, produced by makeinfo version 6.7 from
+guix-cookbook.de.texi.
+
+Copyright © 2019 Ricardo Wurmus
+Copyright © 2019 Efraim Flashner
+Copyright © 2019 Pierre Neidhardt
+Copyright © 2020 Oleg Pykhalov
+Copyright © 2020 Matthew Brooks
+Copyright © 2020 Marcin Karpezo
+
+   Es ist Ihnen gestattet, dieses Dokument zu vervielfältigen,
+weiterzugeben und/oder zu verändern, unter den Bedingungen der GNU Free
+Documentation License, entweder gemäß Version 1.3 der Lizenz oder (nach
+Ihrer Option) einer späteren Version, die von der Free Software
+Foundation veröffentlicht wurde, ohne unveränderliche Abschnitte, ohne
+vorderen Umschlagtext und ohne hinteren Umschlagtext. Eine Kopie der
+Lizenz finden Sie im Abschnitt mit dem Titel „GNU Free Documentation
+License“.
+INFO-DIR-SECTION Systemadministration
+START-INFO-DIR-ENTRY
+* Guix-Kochbuch: (guix-cookbook.de).  Anleitungen und Beispiele für GNU
+                                        Guix.
+END-INFO-DIR-ENTRY
+
+
+File: guix-cookbook.de.info,  Node: Top,  Next: Anleitungen zu Scheme,  Up: (dir)
+
+GNU-Guix-Kochbuch
+*****************
+
+Dieses Dokument stellt Anleitungen und detaillierte Beispiele vor, wie
+man GNU Guix benutzt, ein Werkzeug zur funktionalen Paketverwaltung, das
+für das GNU-System geschrieben wurde. Bitte lesen Sie Details zum
+System, seinen Programmierschnittstellen und ähnlichen Konzepten im
+*note (guix.de)Top:: nach.
+
+   Wenn Sie dieses Dokument in Ihre eigene Sprache übersetzen möchten,
+dann sind Sie beim Translation Project
+(https://translationproject.org/domain/guix-cookbook.html) herzlich
+willkommen.
+
+* Menu:
+
+* Anleitungen zu Scheme::    Lernen Sie Ihre neue Lieblingssprache kennen!
+* Paketerstellung::          Anleitungen, wie man Pakete erstellt.
+* Systemkonfiguration::      Das GNU-System anpassen.
+* Fortgeschrittene Paketverwaltung::  Alle Macht den Nutzern!
+
+* Danksagungen::             Danke!
+* GNU-Lizenz für freie Dokumentation::  Die Lizenz dieses Dokuments.
+* Konzeptverzeichnis::       Konzepte.
+
+ — Detaillierte Liste der Knoten —
+
+
+
+Anleitungen zu Scheme
+
+
+
+* Ein Schnellkurs in Scheme::  Die Grundzüge von Scheme erlernen.
+
+Paketerstellung
+
+
+
+* Anleitung zum Paketeschreiben::  Lasst uns ein Paket zu Guix beitragen!
+
+Systemkonfiguration
+
+
+
+* Den Kernel anpassen::      Einen eigenen Linux-Kernel benutzen
+
+
+
+
+
+File: guix-cookbook.de.info,  Node: Anleitungen zu Scheme,  Next: Paketerstellung,  Prev: Top,  Up: Top
+
+1 Anleitungen zu Scheme
+***********************
+
+GNU Guix ist in Scheme geschrieben, einer für alle Anwendungszwecke
+geeigneten Programmiersprache, und viele Funktionalitäten von Guix
+können programmatisch angesteuert und verändert werden. Sie können
+Scheme benutzen, um Paketdefinitionen zu erzeugen, abzuändern, ganze
+Betriebssysteme einzuspielen etc.
+
+   Wenn man die Grundzüge kennt, wie man in Scheme programmiert, bekommt
+man Zugang zu vielen der fortgeschrittenen Funktionen von Guix — und Sie
+müssen dazu nicht einmal ein erfahrener Programmierer sein!
+
+   Legen wir los!
+
+* Menu:
+
+* Ein Schnellkurs in Scheme::
+
+
+File: guix-cookbook.de.info,  Node: Ein Schnellkurs in Scheme,  Up: Anleitungen zu Scheme
+
+1.1 Ein Schnellkurs in Scheme
+=============================
+
+Die von Guix benutzte Scheme-Implementierung nennt sich Guile. Um mit
+der Sprache herumspielen zu können, installieren Sie Guile mit ‘guix
+install guile’ und starten eine interaktive Programmierumgebung
+(englisch REPL
+(https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)),
+indem Sie ‘guile’ auf der Befehlszeile ausführen.
+
+   Alternativ können Sie auch den Befehl ‘guix environment --ad-hoc
+guile -- guile’ ausführen, wenn Sie Guile lieber _nicht_ in Ihr
+Nutzerprofil installieren wollen.
+
+   In den folgenden Beispielen stehen die Zeilen dafür, was Sie auf der
+REPL eintippen; wenn eine Zeile mit „⇒“ beginnt, zeigt sie das Ergebnis
+einer Auswertung, während Zeilen, die mit „⊣“ beginnen, für eine
+angezeigte Ausgabe stehen. Siehe *note (guile)Using Guile
+Interactively:: für mehr Details zur REPL.
+
+   • Die Scheme-Syntax ist an sich ein Baum von Ausdrücken
+     (Lisp-Programmierer nennen sie _symbolische Ausdrücke_, kurz
+     _S-Ausdrücke_ bzw. englisch _s-expression_). Ein solcher Ausdruck
+     kann ein Literal sein, wie z.B. Zahlen oder Zeichenketten, oder er
+     kann ein zusammengesetzter Ausdruck sein, d.h. eine geklammerte
+     Liste von zusammengesetzten und literalen Ausdrücken. Dabei stehen
+     ‘#t’ und ‘#f’ jeweils für die Booleschen Werte „wahr“ und „falsch“.
+
+     Beispiele für gültige Ausdrücke
+
+          "Hallo Welt!"
+          ⇒ "Hallo Welt!"
+
+          17
+          ⇒ 17
+
+          (display (string-append "Hallo " "Guix" "\n"))
+          ⊣ Hallo Guix!
+          ⇒ #<unspecified>
+
+   • Das letzte Beispiel eben ist der Aufruf einer Funktion innerhalb
+     eines anderen Funktionsaufrufs. Wenn ein geklammerter Ausdruck
+     ausgewertet wird, ist der erste Term die Funktion und der Rest sind
+     die Argumente, die an die Funktion übergeben werden. Jede Funktion
+     liefert ihren zuletzt ausgewerteten Ausdruck als ihren
+     Rückgabewert.
+
+   • Anonyme Funktionen werden mit dem ‘lambda’-Term deklariert:
+
+          (lambda (x) (* x x))
+          ⇒ #<procedure 120e348 at <unknown port>:24:0 (x)>
+
+     Die obige Prozedur liefert das Quadrat ihres Arguments. Weil alles
+     ein Ausdruck ist, liefert der Ausdruck ‘lambda’ eine anonyme
+     Prozedur, die wiederum auf ein Argument angewandt werden kann:
+
+          ((lambda (x) (* x x)) 3)
+          ⇒ 9
+
+   • Allem kann mit ‘define’ ein globaler Name zugewiesen werden:
+
+          (define a 3)
+          (define quadrat (lambda (x) (* x x)))
+          (quadrat a)
+          ⇒ 9
+
+   • Prozeduren können auch kürzer mit der folgenden Syntax definiert
+     werden:
+
+          (define (quadrat x) (* x x))
+
+   • Eine Listenstruktur kann mit der ‘list’-Prozedur erzeugt werden:
+
+          (list 2 a 5 7)
+          ⇒ (2 3 5 7)
+
+   • Mit dem “quote”-Zeichen wird das Auswerten eines geklammerten
+     Ausdrucks abgeschaltet: Der erste Term wird _nicht_ auf den anderen
+     Termen aufgerufen (siehe *note quote: (guile)Expression Syntax.).
+     Folglich liefert es quasi eine Liste von Termen.
+
+          '(display (string-append "Hello " "Guix" "\n"))
+          ⇒ (display (string-append "Hello " "Guix" "\n"))
+
+          '(2 a 5 7)
+          ⇒ (2 a 5 7)
+
+   • Mit einem “quasiquote”-Zeichen wird die Auswertung eines
+     geklammerten Ausdrucks so lange abgeschaltet, bis ein “unquote”
+     (ein Komma) sie wieder aktiviert. Wir können damit genau steuern,
+     was ausgewertet wird und was nicht.
+
+          `(2 a 5 7 (2 ,a 5 ,(+ a 4)))
+          ⇒ (2 a 5 7 (2 3 5 7))
+
+     Beachten Sie, dass obiges Ergenis eine Liste verschiedenartiger
+     Elemente ist: Zahlen, Symbole (in diesem Fall ‘a’) und als letztes
+     Element selbst wieder eine Liste.
+
+   • Mehrere Variable können in einer lokalen Umgebung mit Bezeichnern
+     versehen werden, indem Sie ‘let’ benutzen (siehe *note (guile)Local
+     Bindings::):
+
+          (define x 10)
+          (let ((x 2)
+                (y 3))
+            (list x y))
+          ⇒ (2 3)
+
+          x
+          ⇒ 10
+
+          y
+          error→ In procedure module-lookup: Unbound variable: y
+
+     Benutzen Sie ‘let*’, damit spätere Variablendeklarationen auf
+     frühere verweisen können.
+
+          (let* ((x 2)
+                 (y (* x 3)))
+            (list x y))
+          ⇒ (2 6)
+
+   • Die Syntax für Schlüsselwörter ist ‘#:’. Wir benutzen sie, um
+     eindeutige Bezeichnungen zu erzeugen. Siehe *note
+     (guile)Keywords::.
+
+   • Das Prozentzeichen ‘%’ wird in der Regel für globale Variable auf
+     Erstellungsebene benutzt, auf die nur lesend zugegriffen werden
+     soll. Beachten Sie, dass es sich dabei nur um eine Konvention
+     handelt, ähnlich wie ‘_’ in C. Scheme behandelt ‘%’ genau wie jedes
+     andere Zeichen.
+
+   • Module werden mit Hilfe von ‘define-module’ erzeugt (siehe *note
+     (guile)Creating Guile Modules::). Zum Beispiel definiert man mit
+
+          (define-module (guix build-system ruby)
+            #:use-module (guix store)
+            #:export (ruby-build
+                      ruby-build-system))
+
+     das Modul ‘guix build-system ruby’, das sich unter dem Pfad
+     ‘guix/build-system/ruby.scm’ innerhalb irgendeines Verzeichnisses
+     im Guile-Ladepfad befinden muss. Es hat eine Abhängigkeit auf das
+     Modul ‘(guix store)’ und exportiert zwei seiner Variablen,
+     ‘ruby-build’ und ‘ruby-build-system’.
+
+   Für eine detailliertere Einführung können Sie einen Blick auf Steve
+Litts Scheme at a Glance
+(http://www.troubleshooters.com/codecorn/scheme_guile/hello.htm) werfen.
+
+   Eines der Referenzbücher zu Scheme ist das einflussreiche „Structure
+and Interpretation of Computer Programs“, von Harold Abelson und Gerald
+Jay Sussman, mit Julie Sussman. Eine deutsche Übersetzung „Struktur und
+Interpretation von Computerprogrammen“ hat Susanne Daniels-Herold
+verfasst. Vom englischen Original finden Sie eine kostenlose Ausgabe
+online (https://mitpress.mit.edu/sites/default/files/sicp/index.html)
+zusammen mit Videos der von den Autoren gehaltenen Vorlesungen
+(https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-001-structure-and-interpretation-of-computer-programs-spring-2005/video-lectures/).
+Das Buch können Sie im Texinfo-Format über das ‘sicp’-Guix-Paket
+beziehen. Probieren Sie es aus: Führen Sie ‘guix install sicp’ aus und
+fangen Sie mit dem Lesen an, indem Sie ‘info sicp’ eintippen (siehe
+*note (sicp)::). Es gibt auch ein inoffizielles E-Book
+(https://sarabander.github.io/sicp/).
+
+   Sie finden noch mehr Bücher, Anleitungen und andere Ressourcen auf
+<https://schemers.org/>.
+
+
+File: guix-cookbook.de.info,  Node: Paketerstellung,  Next: Systemkonfiguration,  Prev: Anleitungen zu Scheme,  Up: Top
+
+2 Paketerstellung
+*****************
+
+In diesem Kapitel bringen wir Ihnen bei, wie Sie Pakete zur mit GNU Guix
+ausgelieferten Paketsammlung beitragen. Dazu gehört, Paketdefinitionen
+in Guile Scheme zu schreiben, sie in Paketmodulen zu organisieren und
+sie zu erstellen.
+
+* Menu:
+
+* Anleitung zum Paketeschreiben::  Eine Anleitung, wie Sie Pakete zu Guix
+                                     hinzufügen.
+
+
+File: guix-cookbook.de.info,  Node: Anleitung zum Paketeschreiben,  Up: Paketerstellung
+
+2.1 Anleitung zum Paketeschreiben
+=================================
+
+GNU Guix zeichnet sich in erster Linie deswegen als das _hackbare_
+Paketverwaltungswerkzeug aus, weil es mit GNU Guile
+(https://www.gnu.org/software/guile/) arbeitet, einer mächtigen,
+hochsprachlichen Programmiersprache, die einen der Dialekte von Scheme
+(https://de.wikipedia.org/wiki/Scheme) darstellt. Scheme wiederum gehört
+zur Lisp-Familie von Programmiersprachen
+(https://de.wikipedia.org/wiki/Lisp).
+
+   Paketdefinitionen werden ebenso in Scheme geschrieben, wodurch Guix
+auf sehr einzigartige Weise mächtiger wird als die meisten anderen
+Paketverwaltungssysteme, die Shell-Skripte oder einfache Sprachen
+benutzen.
+
+   • Sie können sich Funktionen, Strukturen, Makros und all die
+     Ausdrucksstärke von Scheme für Ihre Paketdefinitionen zu Nutze
+     machen.
+
+   • Durch Vererbung können Sie ohne viel Aufwand ein Paket anpassen,
+     indem Sie von ihm erben lassen und nur das Nötige abändern.
+
+   • Stapelverarbeitung („batch mode“) wird möglich; die ganze
+     Paketsammlung kann analysiert, gefiltert und verarbeitet werden.
+     Versuchen Sie, ein Serversystem ohne Bildschirm („headless“) auch
+     tatsächlich von allen Grafikschnittstellen zu befreien? Das ist
+     möglich. Möchten Sie alles von Neuem aus seinem Quellcode
+     erstellen, aber mit eingeschalteten besonderen
+     Compileroptimierungen? Übergeben Sie einfach das passende
+     ‘#:make-flags "..."’-Argument an die Paketliste. Es wäre nicht
+     übertrieben, hier an die USE-Optionen von Gentoo
+     (https://wiki.gentoo.org/wiki/USE_flag) zu denken, aber das hier
+     übertrifft sie: Der Paketautor muss vorher gar nicht darüber
+     nachgedacht haben, der Nutzer kann sie selbst _programmieren_!
+
+   Die folgende Anleitung erklärt alles Grundlegende über das Schreiben
+von Paketen mit Guix. Dabei setzen wir kein großes Wissen über das
+Guix-System oder die Lisp-Sprache voraus. Vom Leser wird nur erwartet,
+dass er mit der Befehlszeile vertraut ist und über grundlegende
+Programmierkenntnisse verfügt.
+
+* Menu:
+
+* Ein Hallo-Welt-Paket::
+* Herangehensweisen::
+* Erweitertes Beispiel::
+* Andere Erstellungssysteme::
+* Programmierbare und automatisierte Paketdefinition::
+* Hilfe bekommen::
+* Schlusswort::
+* Literaturverzeichnis::
+
+
+File: guix-cookbook.de.info,  Node: Ein Hallo-Welt-Paket,  Next: Herangehensweisen,  Up: Anleitung zum Paketeschreiben
+
+2.1.1 Ein Hallo-Welt-Paket
+--------------------------
+
+Der Abschnitt „Pakete definieren“ im Handbuch führt in die Grundlagen
+des Paketschreibens für Guix ein (siehe *note (guix.de)Pakete
+definieren::). Im folgenden Abschnitt werden wir diese Grundlagen
+teilweise rekapitulieren.
+
+   GNU Hello ist ein Projekt, das uns als Stellvertreter für „richtige“
+Projekte und allgemeines Beispiel für das Schreiben von Paketen dient.
+Es verwendet das GNU-Erstellungssystem (‘./configure && make && make
+install’). Guix stellt uns schon eine Paketdefinition zur Verfügung, die
+uns einen perfekten Ausgangspunkt bietet. Sie können sich ihre
+Deklaration anschauen, indem Sie ‘guix edit hello’ von der Befehlszeile
+ausführen. Schauen wir sie uns an:
+
+     (define-public hello
+       (package
+         (name "hello")
+         (version "2.10")
+         (source (origin
+                   (method url-fetch)
+                   (uri (string-append "mirror://gnu/hello/hello-" version
+                                       ".tar.gz"))
+                   (sha256
+                    (base32
+                     "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+         (build-system gnu-build-system)
+         (synopsis "Hello, GNU world: An example GNU package")
+         (description
+          "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+     serves as an example of standard GNU coding practices.  As such, it supports
+     command-line arguments, multiple languages, and so on.")
+         (home-page "https://www.gnu.org/software/hello/")
+         (license gpl3+)))
+
+   Wie Sie sehen können, ist das meiste klar strukturiert. Aber sehen
+wir uns die Felder zusammen an:
+
+‘name’
+     Der Name des Projekts. Wir halten uns an die Konventionen von
+     Scheme und bevorzugen deshalb Kleinschreibung ohne Unterstriche,
+     sondern mit Bindestrichen zwischen den Wörtern.
+
+‘source’
+     Dieses Feld enthält eine Beschreibung, was der Ursprung des
+     Quellcodes ist. Das ‘origin’-Verbundsobjekt enthält diese Felder:
+
+       1. Die Methode. Wir verwenden hier ‘url-fetch’, um über HTTP/FTP
+          herunterzuladen, aber es gibt auch andere Methoden wie
+          ‘git-fetch’ für Git-Repositorys.
+       2. Die URI, welche bei ‘url-fetch’ normalerweise eine Ortsangabe
+          mit ‘https://’ ist. In diesem Fall verweist die besondere URI
+          ‚mirror://gnu‘ auf eine von mehreren wohlbekannten
+          Ortsangaben, von denen Guix jede durchprobieren kann, um den
+          Quellcode herunterzuladen, wenn es bei manchen davon nicht
+          klappt.
+       3. Die ‘sha256’-Prüfsumme der angefragten Datei. Sie ist
+          notwendig, damit sichergestellt werden kann, dass der
+          Quellcode nicht beschädigt ist. Beachten Sie, dass Guix mit
+          Zeichenketten in Base32-Kodierung arbeitet, weshalb wir die
+          ‘base32’-Funktion aufrufen.
+
+‘build-system’
+
+     Hier glänzt Schemes Fähigkeit zur Abstraktion: In diesem Fall
+     abstrahiert ‘gnu-build-system’ die berühmten Schritte ‘./configure
+     && make && make install’, die sonst in der Shell aufgerufen würden.
+     Zu den anderen Erstellungssystemen gehören das
+     ‘trivial-build-system’, das nichts tut und dem Paketautoren das
+     Schreiben sämtlicher Erstellungsschritte abverlangt, das
+     ‘python-build-system’, das ‘emacs-build-system’, und viele mehr
+     (siehe *note (guix.de)Erstellungssysteme::).
+
+‘synopsis’
+     Die Zusammenfassung. Sie sollte eine knappe Beschreibung sein, was
+     das Paket tut. Für viele Pakete findet sich auf der Homepage ein
+     Einzeiler, der als Zusammenfassung benutzt werden kann.
+
+‘description’
+     Genau wie bei der Zusammenfassung ist es in Ordnung, die
+     Beschreibung des Projekts für das Paket wiederzuverwenden. Beachten
+     Sie, dass Guix dafür Texinfo-Syntax verlangt.
+
+‘home-page’
+     Hier soll möglichst HTTPS benutzt werden.
+
+‘license’
+     Siehe die vollständige Liste verfügbarer Lizenzen in
+     ‘guix/licenses.scm’ im Guix-Quellcode.
+
+   Es wird Zeit, unser erstes Paket zu schreiben! Aber noch nichts
+tolles, wir bleiben bei einem Paket ‘my-hello’ stelltvertretend für
+„richtige“ Software; es ist eine Kopie obiger Deklaration.
+
+   Genau wie beim Ritual, Neulinge in Programmiersprachen „Hallo Welt“
+schreiben zu lassen, fangen wir mit der vielleicht „arbeitsintensivsten“
+Herangehensweise ans Paketeschreiben an. Wir kümmern uns später darum,
+wie man am besten an Paketen arbeitet; erst einmal nehmen wir den
+einfachsten Weg.
+
+   Speichern Sie den folgenden Code in eine Datei ‘my-hello.scm’.
+
+     (use-modules (guix packages)
+                  (guix download)
+                  (guix build-system gnu)
+                  (guix licenses))
+
+     (package
+       (name "my-hello")
+       (version "2.10")
+       (source (origin
+                 (method url-fetch)
+                 (uri (string-append "mirror://gnu/hello/hello-" version
+                                     ".tar.gz"))
+                 (sha256
+                  (base32
+                   "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+       (build-system gnu-build-system)
+       (synopsis "Hello, Guix world: An example custom Guix package")
+       (description
+        "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+     serves as an example of standard GNU coding practices.  As such, it supports
+     command-line arguments, multiple languages, and so on.")
+       (home-page "https://www.gnu.org/software/hello/")
+       (license gpl3+))
+
+   Wir erklären den zusätzlichen Code in Kürze.
+
+   Spielen Sie ruhig mit unterschiedlichen Werten für die verschiedenen
+Felder herum. Wenn Sie den Quellort (die „source“) ändern, müssen Sie
+die Prüfsumme aktualisieren. Tatsächlich weigert sich Guix, etwas zu
+erstellen, wenn die angegebene Prüfsumme nicht zu der berechneten
+Prüfsumme des Quellcodes passt. Um die richtige Prüfsumme für die
+Paketdeklaration zu finden, müssen wir den Quellcode herunterladen, die
+SHA256-Summe davon berechnen und sie in Base32 umwandeln.
+
+   Glücklicherweise kann Guix diese Aufgabe automatisieren; wir müssen
+lediglich die URI übergeben.
+
+     $ guix download mirror://gnu/hello/hello-2.10.tar.gz
+
+     Starting download of /tmp/guix-file.JLYgL7
+     From https://ftpmirror.gnu.org/gnu/hello/hello-2.10.tar.gz...
+     following redirection to `https://mirror.ibcp.fr/pub/gnu/hello/hello-2.10.tar.gz'...
+      …10.tar.gz  709KiB                                 2.5MiB/s 00:00 [##################] 100.0%
+     /gnu/store/hbdalsf5lpf01x4dcknwx6xbn6n5km6k-hello-2.10.tar.gz
+     0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i
+
+   In diesem speziellen Fall sagt uns die Ausgabe, welcher Spiegelserver
+ausgewählt wurde. Wenn das Ergebnis des obigen Befehls nicht dasselbe
+ist wie im Codeschnipsel, dann aktualisieren Sie Ihre
+‘my-hello’-Deklaration entsprechend.
+
+   Beachten Sie, dass Tarball-Archive von GNU-Paketen mit einer
+OpenPGP-Signatur ausgeliefert werden, deshalb sollten Sie mit Sicherheit
+die Signatur dieses Tarballs mit „gpg“ überprüfen, um ihn zu
+authentifizieren, bevor Sie weitermachen.
+
+     $ guix download mirror://gnu/hello/hello-2.10.tar.gz.sig
+
+     Starting download of /tmp/guix-file.03tFfb
+     From https://ftpmirror.gnu.org/gnu/hello/hello-2.10.tar.gz.sig...
+     following redirection to `https://ftp.igh.cnrs.fr/pub/gnu/hello/hello-2.10.tar.gz.sig'...
+      ….tar.gz.sig  819B                                                                                                                       1.2MiB/s 00:00 [##################] 100.0%
+     /gnu/store/rzs8wba9ka7grrmgcpfyxvs58mly0sx6-hello-2.10.tar.gz.sig
+     0q0v86n3y38z17rl146gdakw9xc4mcscpk8dscs412j22glrv9jf
+     $ gpg --verify /gnu/store/rzs8wba9ka7grrmgcpfyxvs58mly0sx6-hello-2.10.tar.gz.sig /gnu/store/hbdalsf5lpf01x4dcknwx6xbn6n5km6k-hello-2.10.tar.gz
+     gpg: Signatur vom So 16 Nov 2014 13:08:37 CET
+     gpg:                mittels RSA-Schlüssel A9553245FDE9B739
+     gpg: Korrekte Signatur von "Sami Kerola (https://www.iki.fi/kerolasa/) <kerolasa@iki.fi>" [unbekannt]
+     gpg: WARNUNG: Dieser Schlüssel trägt keine vertrauenswürdige Signatur!
+     gpg:          Es gibt keinen Hinweis, daß die Signatur wirklich dem vorgeblichen Besitzer gehört.
+     Haupt-Fingerabdruck  = 8ED3 96E3 7E38 D471 A005  30D3 A955 3245 FDE9 B739
+
+   Sie können dann unbesorgt das hier ausführen:
+
+     $ guix package --install-from-file=my-hello.scm
+
+   Nun sollte ‘my-hello’ in Ihrem Profil enthalten sein!
+
+     $ guix package --list-installed=my-hello
+     my-hello	2.10	out
+     /gnu/store/f1db2mfm8syb8qvc357c53slbvf1g9m9-my-hello-2.10
+
+   Wir sind so weit gekommen, wie es ohne Scheme-Kenntnisse möglich ist.
+Bevor wir mit komplexeren Paketen weitermachen, ist jetzt der Zeitpunkt
+gekommen, Ihr Wissen über Scheme zu entstauben. Siehe *note Ein
+Schnellkurs in Scheme:: für eine Auffrischung.
+
+
+File: guix-cookbook.de.info,  Node: Herangehensweisen,  Next: Erweitertes Beispiel,  Prev: Ein Hallo-Welt-Paket,  Up: Anleitung zum Paketeschreiben
+
+2.1.2 Herangehensweisen
+-----------------------
+
+Im Rest dieses Kapitels setzen wir ein paar grundlegende
+Scheme-Programmierkenntnisse voraus. Wir wollen uns nun verschiedene
+mögliche Herangehensweisen anschauen, wie man an Guix-Paketen arbeiten
+kann.
+
+   Es gibt mehrere Arten, eine Umgebung zum Paketeschreiben aufzusetzen.
+
+   Unsere Empfehlung ist, dass Sie direkt am Checkout des
+Guix-Quellcodes arbeiten, weil es dann für alle einfacher ist, zu Guix
+beizutragen.
+
+   Werfen wir aber zunächst einen Blick auf andere Möglichkeiten.
+
+* Menu:
+
+* Lokale Datei::
+* GUIX_PACKAGE_PATH::
+* Guix-Kanäle::
+* Direkt am Checkout hacken::
+
+
+File: guix-cookbook.de.info,  Node: Lokale Datei,  Next: GUIX_PACKAGE_PATH,  Up: Herangehensweisen
+
+2.1.2.1 Lokale Datei
+....................
+
+Diese Methode haben wir zuletzt für ‘my-hello’ benutzt. Jetzt nachdem
+wir uns mit den Scheme-Grundlagen befasst haben, können wir uns den Code
+am Anfang erklären. ‘guix package --help’ sagt uns:
+
+       -f, --install-from-file=DATEI
+                              das Paket installieren, zu dem der Code in der DATEI
+                                ausgewertet wird
+
+   Daher _muss_ der letzte Ausdruck ein Paket liefern, was im vorherigen
+Beispiel der Fall ist.
+
+   Der Ausdruck ‘use-modules’ sagt aus, welche Module in der Datei
+gebraucht werden. Module sind eine Sammlung aus Werten und Prozeduren.
+In anderen Programmiersprachen werden sie oft „Bibliotheken“ oder
+„Pakete“ genannt.
+
+
+File: guix-cookbook.de.info,  Node: GUIX_PACKAGE_PATH,  Next: Guix-Kanäle,  Prev: Lokale Datei,  Up: Herangehensweisen
+
+2.1.2.2 ‘GUIX_PACKAGE_PATH’
+...........................
+
+_Anmerkung: Seit Guix 0.16 sind die vielseitigeren “Kanäle” von Guix die
+bevorzugte Wahl und sie lösen den ‘GUIX_PACKAGE_PATH’ ab. Siehe den
+nächsten Abschnitt._
+
+   Es kann mühsam sein, die Datei auf der Befehlszeile anzugeben, statt
+einfach ‘guix package --install my-hello’ aufzurufen, wie man es bei den
+offiziellen Paketen tun würde.
+
+   Guix ermöglicht es, den Prozess zu optimieren, indem man so viele
+„Paketdeklarationsverzeichnisse“, wie man will, hinzufügt.
+
+   Create a directory, say ‘~./guix-packages’ and add it to the
+‘GUIX_PACKAGE_PATH’ environment variable:
+
+     $ mkdir ~/guix-packages
+     $ export GUIX_PACKAGE_PATH=~/guix-packages
+
+   Um mehrere Verzeichnisse hinzuzufügen, trennen Sie diese ab durch
+einen Doppelpunkt (‘:’).
+
+   Unser ‘my-hello’ von vorher braucht zudem ein paar Anpassungen:
+
+     (define-module (my-hello)
+       #:use-module (guix licenses)
+       #:use-module (guix packages)
+       #:use-module (guix build-system gnu)
+       #:use-module (guix download))
+
+     (define-public my-hello
+       (package
+         (name "my-hello")
+         (version "2.10")
+         (source (origin
+                   (method url-fetch)
+                   (uri (string-append "mirror://gnu/hello/hello-" version
+                                       ".tar.gz"))
+                   (sha256
+                    (base32
+                     "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i"))))
+         (build-system gnu-build-system)
+         (synopsis "Hello, Guix world: An example custom Guix package")
+         (description
+          "GNU Hello prints the message \"Hello, world!\" and then exits.  It
+     serves as an example of standard GNU coding practices.  As such, it supports
+     command-line arguments, multiple languages, and so on.")
+         (home-page "https://www.gnu.org/software/hello/")
+         (license gpl3+)))
+
+   Beachten Sie, dass wir den Paketwert einer exportierten Variablen mit
+‘define-public’ zugewiesen haben. Das bedeutet, das Paket wird einer
+Variablen ‘my-hello’ zugewiesen, damit darauf verwiesen werden kann.
+Unter anderem kann es dadurch als Abhängigkeit anderer Pakete verwendet
+werden.
+
+   Wenn Sie ‘guix package --install-from-file=my-hello.scm’ auf der
+obigen Datei aufrufen, geht es schief, weil der letzte Ausdruck,
+‘define-public’, kein Paket zurückliefert. Wenn Sie trotzdem
+‘define-public’ für jene Herangehensweise verwenden möchten, stellen Sie
+sicher, dass am Ende der Datei eine Auswertung von ‘my-hello’ steht:
+
+     ; …
+     (define-public my-hello
+       ; …
+       )
+
+     my-hello
+
+   Meistens tut man das aber nicht.
+
+   ‘my-hello’ sollte nun Teil der Paketsammlung sein, genau wie all die
+anderen, offiziellen Pakete. Sie können das so ausprobieren:
+
+     $ guix package --show=my-hello
+
+
+File: guix-cookbook.de.info,  Node: Guix-Kanäle,  Next: Direkt am Checkout hacken,  Prev: GUIX_PACKAGE_PATH,  Up: Herangehensweisen
+
+2.1.2.3 Guix-Kanäle
+...................
+
+Guix 0.16 hat Kanäle eingeführt, die sehr ähnlich zu ‘GUIX_PACKAGE_PATH’
+sind, sich aber besser integrieren und Provenienzverfolgung ermöglichen.
+Kanäle befinden sich nicht unbedingt auf einem lokalen Rechner, sie
+können zum Beispiel auch anderen als öffentliches Git-Repository
+angeboten werden. Natürlich können zur selben Zeit mehrere Kanäle
+benutzt werden.
+
+   Siehe *note (guix.de)Kanäle:: für Details zu deren Einrichtung.
+
+
+File: guix-cookbook.de.info,  Node: Direkt am Checkout hacken,  Prev: Guix-Kanäle,  Up: Herangehensweisen
+
+2.1.2.4 Direkt am Checkout hacken
+.................................
+
+Es wird empfohlen, direkt am Code des Guix-Projekts zu arbeiten, weil
+Ihre Änderungen dann später mit weniger Schwierigkeiten bei uns
+eingereicht werden können, damit Ihre harte Arbeit der Gemeinschaft
+nützt!
+
+   Anders als die meisten Software-Distributionen werden bei Guix sowohl
+Werkzeuge (einschließlich des Paketverwaltungsprogramms) als auch die
+Paketdefinitionen in einem Repository gespeichert. Der Grund für diese
+Entscheidung war, dass Entwickler die Freiheit haben sollten, die
+Programmierschnittstelle (API) zu ändern, ohne Inkompatibilitäten
+einzuführen, indem alle Pakete gleichzeitig mit der API aktualisiert
+werden. Dadurch wird die Entwicklung weniger träge.
+
+   Legen Sie ein Checkout des offiziellen Git-Repositorys
+(https://git-scm.com/) an:
+
+     $ git clone https://git.savannah.gnu.org/git/guix.git
+
+   Im Rest dieses Artikels schreiben wir ‘$GUIX_CHECKOUT’, wenn wir den
+Ort meinen, an dem das Checkout gespeichert ist.
+
+   Folgen Sie den Anweisungen im Handbuch (siehe (*note
+(guix.de)Mitwirken::), um die nötige Umgebung für die Nutzung des
+Repositorys herzustellen.
+
+   Sobald sie hergestellt wurde, sollten Sie die Paketdefinitionen aus
+der Repository-Umgebung benutzen können.
+
+   Versuchen Sie sich ruhig daran, die Paketdefinitionen zu editieren,
+die Sie in ‘$GUIX_CHECKOUT/gnu/packages’ finden.
+
+   Das Skript ‘$GUIX_CHECKOUT/pre-inst-env’ ermöglicht es Ihnen, ‘guix’
+auf der Paketsammlung des Repositorys aufzurufen (siehe *note
+(guix.de)Guix vor der Installation ausführen::).
+
+   • So suchen Sie Pakete, z.B. Ruby:
+
+            $ cd $GUIX_CHECKOUT
+            $ ./pre-inst-env guix package --list-available=ruby
+                ruby    1.8.7-p374      out     gnu/packages/ruby.scm:119:2
+                ruby    2.1.6   out     gnu/packages/ruby.scm:91:2
+                ruby    2.2.2   out     gnu/packages/ruby.scm:39:2
+
+   • Erstellen Sie ein Paket, z.B. Ruby in Version 2.1:
+
+            $ ./pre-inst-env guix build --keep-failed ruby@2.1
+            /gnu/store/c13v73jxmj2nir2xjqaz5259zywsa9zi-ruby-2.1.6
+
+   • Installieren Sie es in Ihr Profil:
+
+            $ ./pre-inst-env guix package --install ruby@2.1
+
+   • Prüfen Sie auf häufige Fehler:
+
+            $ ./pre-inst-env guix lint ruby@2.1
+
+   Guix ist bestrebt, einen hohen Standard an seine Pakete anzusetzen.
+Wenn Sie Beiträge zum Guix-Projekt leisten,
+
+   • schreiben Sie Ihren Code im Stil von Guix (siehe *note
+     (guix.de)Programmierstil::)
+   • und schauen Sie sich die Kontrollliste aus dem Handbuch (siehe
+     *note (guix.de)Einreichen von Patches::) noch einmal an.
+
+   Sobald Sie mit dem Ergebnis zufrieden sind, freuen wir uns, wenn Sie
+Ihren Beitrag an uns schicken, damit wir ihn in Guix aufnehmen. Dieser
+Prozess wird auch im Handbuch beschrieben (siehe *note
+(guix.de)Mitwirken::)<.
+
+   Es handelt sich um eine gemeinschaftliche Arbeit, je mehr also
+mitmachen, desto besser wird Guix!
+
+
+File: guix-cookbook.de.info,  Node: Erweitertes Beispiel,  Next: Andere Erstellungssysteme,  Prev: Herangehensweisen,  Up: Anleitung zum Paketeschreiben
+
+2.1.3 Erweitertes Beispiel
+--------------------------
+
+Einfacher als obiges Hallo-Welt-Beispiel wird es nicht. Pakete können
+auch komplexer als das sein und Guix eignet sich für fortgeschrittenere
+Szenarien. Schauen wir uns ein anderes, umfangreicheres Paket an (leicht
+modifiziert gegenüber Guix’ Quellcode):
+
+     (define-module (gnu packages version-control)
+       #:use-module ((guix licenses) #:prefix license:)
+       #:use-module (guix utils)
+       #:use-module (guix packages)
+       #:use-module (guix git-download)
+       #:use-module (guix build-system cmake)
+       #:use-module (gnu packages ssh)
+       #:use-module (gnu packages web)
+       #:use-module (gnu packages pkg-config)
+       #:use-module (gnu packages python)
+       #:use-module (gnu packages compression)
+       #:use-module (gnu packages tls))
+
+     (define-public my-libgit2
+       (let ((commit "e98d0a37c93574d2c6107bf7f31140b548c6a7bf")
+             (revision "1"))
+         (package
+           (name "my-libgit2")
+           (version (git-version "0.26.6" revision commit))
+           (source (origin
+                     (method git-fetch)
+                     (uri (git-reference
+                           (url "https://github.com/libgit2/libgit2/")
+                           (commit commit)))
+                     (file-name (git-file-name name version))
+                     (sha256
+                      (base32
+                       "17pjvprmdrx4h6bb1hhc98w9qi6ki7yl57f090n9kbhswxqfs7s3"))
+                     (patches (search-patches "libgit2-mtime-0.patch"))
+                     (modules '((guix build utils)))
+                     (snippet '(begin
+                                 ;; Remove bundled software.
+                                 (delete-file-recursively "deps")
+                                 #t))))
+           (build-system cmake-build-system)
+           (outputs '("out" "debug"))
+           (arguments
+            `(#:tests? #t                            ; Run the test suite (this is the default)
+              #:configure-flags '("-DUSE_SHA1DC=ON") ; SHA-1 collision detection
+              #:phases
+              (modify-phases %standard-phases
+                (add-after 'unpack 'fix-hardcoded-paths
+                  (lambda _
+                    (substitute* "tests/repo/init.c"
+                      (("#!/bin/sh") (string-append "#!" (which "sh"))))
+                    (substitute* "tests/clar/fs.h"
+                      (("/bin/cp") (which "cp"))
+                      (("/bin/rm") (which "rm")))
+                    #t))
+                ;; Run checks more verbosely.
+                (replace 'check
+                  (lambda _ (invoke "./libgit2_clar" "-v" "-Q")))
+                (add-after 'unpack 'make-files-writable-for-tests
+                    (lambda _ (for-each make-file-writable (find-files "." ".*")))))))
+           (inputs
+            `(("libssh2" ,libssh2)
+              ("http-parser" ,http-parser)
+              ("python" ,python-wrapper)))
+           (native-inputs
+            `(("pkg-config" ,pkg-config)))
+           (propagated-inputs
+            ;; These two libraries are in 'Requires.private' in libgit2.pc.
+            `(("openssl" ,openssl)
+              ("zlib" ,zlib)))
+           (home-page "https://libgit2.github.com/")
+           (synopsis "Library providing Git core methods")
+           (description
+            "Libgit2 is a portable, pure C implementation of the Git core methods
+     provided as a re-entrant linkable library with a solid API, allowing you to
+     write native speed custom Git applications in any language with bindings.")
+           ;; GPLv2 with linking exception
+           (license license:gpl2))))
+
+   (In solchen Fällen, wo Sie nur ein paar wenige Felder einer
+Paketdefinition abändern wollen, wäre es wirklich besser, wenn Sie
+Vererbung einsetzen würden, statt alles abzuschreiben. Siehe unten.)
+
+   Reden wir über diese Felder im Detail.
+
+2.1.3.1 ‘git-fetch’-Methode
+...........................
+
+Anders als die ‘url-fetch’-Methode erwartet ‘git-fetch’ eine
+‘git-reference’, welche ein Git-Repository und einen Commit
+entgegennimmt. Der Commit kann eine beliebige Art von Git-Referenz sein,
+z.B. ein Tag. Wenn die ‘version’ also mit einem Tag versehen ist, kann
+sie einfach benutzt werden. Manchmal ist dem Tag ein Präfix ‘v’
+vorangestellt. In diesem Fall würden Sie ‘(commit (string-append "v"
+version))’ schreiben.
+
+   Um sicherzustellen, dass der Quellcode aus dem Git-Repository in
+einem nachvollziehbaren Verzeichnis mit lesbarem Namen landet, schreiben
+wir ‘(file-name (git-file-name name version))’.
+
+   Beachten Sie, dass auch eine Prozedur ‘git-version’ existiert, mit
+der die Version beim Paketieren eines bestimmten Commits eines Programms
+abgeleitet werden kann.
+
+2.1.3.2 Schnipsel
+.................
+
+Snippets are quoted (i.e. non-evaluated) Scheme code that are a means of
+patching the source. They are a Guix-y alternative to the traditional
+‘.patch’ files. Because of the quote, the code in only evaluated when
+passed to the Guix daemon for building. There can be as many snippets as
+needed.
+
+   In Schnipseln könnten zusätzliche Guile-Module benötigt werden. Diese
+können importiert werden, indem man sie im Feld ‘modules’ angibt.
+
+2.1.3.3 Eingaben
+................
+
+Zunächst ein syntaktischer Kommentar: Sehen Sie die Syntax mit
+‘quasiquote’ und Komma?
+
+         (native-inputs
+          `(("pkg-config" ,pkg-config)))
+
+   ist das Gleiche wie
+
+         (native-inputs
+          (list (list "pkg-config" pkg-config)))
+
+   Sie werden hauptsächlich erstere Variante sehen, weil sie kürzer ist.
+
+   Es gibt 3 verschiedene Arten von Eingaben. Kurz gefasst:
+
+native-inputs
+     Sie werden zum Erstellen gebraucht, aber _nicht_ zur Laufzeit —
+     wenn Sie ein Paket als Substitut installieren, werden diese
+     Eingaben nirgendwo installiert.
+inputs
+     Sie werden in den Store installiert, aber nicht in das Profil, und
+     sie stehen beim Erstellen zur Verfügung.
+propagated-inputs
+     Sie werden sowohl in den Store als auch ins Profil installiert und
+     sind auch beim Erstellen verfügbar.
+
+   Siehe *note (guix.de)„package“-Referenz:: für mehr Details.
+
+   Der Unterschied zwischen den verschiedenen Eingaben ist wichtig: Wenn
+eine Abhängigkeit als ‘input’ statt als ‘propagated-input’ ausreicht,
+dann sollte sie auch so eingeordnet werden, sonst „verschmutzt“ sie das
+Profil des Benutzers ohne guten Grund.
+
+   Wenn eine Nutzerin beispielsweise ein grafisches Programm
+installiert, das von einem Befehlszeilenwerkzeug abhängt, sie sich aber
+nur für den grafischen Teil interessiert, dann sollten wir sie nicht zur
+Installation des Befehlszeilenwerkzeugs in ihr Benutzerprofil zwingen.
+Um die Abhängigkeit sollte sich das Paket kümmern, nicht seine
+Benutzerin. Mit _Inputs_ können wir Abhängigkeiten verwenden, wo sie
+gebraucht werden, ohne Nutzer zu belästigen, indem wir ausführbare
+Dateien (oder Bibliotheken) in deren Profil installieren.
+
+   Das Gleiche gilt für _native-inputs_: Wenn das Programm einmal
+installiert ist, können Abhängigkeiten zur Erstellungszeit gefahrlos dem
+Müllsammler anvertraut werden. Sie sind auch besser, wenn ein Substitut
+verfügbar ist, so dass nur die ‘inputs’ und ‘propagated-inputs’
+heruntergeladen werden; ‘native-inputs’ braucht niemand, der das Paket
+aus einem Substitut heraus installiert.
+
+2.1.3.4 Ausgaben
+................
+
+Genau wie ein Paket mehrere Eingaben haben kann, kann es auch mehrere
+Ausgaben haben.
+
+   Jede Ausgabe entspricht einem anderen Verzeichnis im Store.
+
+   Die Benutzerin kann sich entscheiden, welche Ausgabe sie installieren
+will; so spart sie Platz auf dem Datenträger und verschmutzt ihr
+Benutzerprofil nicht mit unerwünschten ausführbaren Dateien oder
+Bibliotheken.
+
+   Nach Ausgaben zu trennen ist optional. Wenn Sie kein ‘outputs’-Feld
+schreiben, heißt die standardmäßige und einzige Ausgabe (also das ganze
+Paket) schlicht ‘"out"’.
+
+   Typische Namen für getrennte Ausgaben sind ‘debug’ und ‘doc’.
+
+   Es wird empfohlen, getrennte Ausgaben nur dann anzubieten, wenn Sie
+gezeigt haben, dass es sich lohnt, d.h. wenn die Ausgabengröße
+signifikant ist (vergleichen Sie sie mittels ‘guix size’) oder das Paket
+modular aufgebaut ist.
+
+2.1.3.5 Argumente ans Erstellungssystem
+.......................................
+
+‘arguments’ ist eine Liste aus Schlüsselwort-Wert-Paaren (eine
+„keyword-value list“), mit denen der Erstellungsprozess konfiguriert
+wird.
+
+   Das einfachste Argument ‘#:tests?’ kann man benutzen, um den
+Testkatalog bei der Erstellung des Pakets nicht zu prüfen. Das braucht
+man meistens dann, wenn das Paket überhaupt keinen Testkatalog hat. Wir
+empfehlen sehr, den Testkatalog zu benutzen, wenn es einen gibt.
+
+   Ein anderes häufiges Argument ist ‘:make-flags’, was eine Liste an
+den ‘make’-Aufruf anzuhängender Befehlszeilenargumente festlegt, so wie
+Sie sie auf der Befehlszeile angeben würden. Zum Beispiel werden die
+folgenden ‘:make-flags’
+
+     #:make-flags (list (string-append "prefix=" (assoc-ref %outputs "out"))
+                        "CC=gcc")
+
+   übersetzt zu
+
+     $ make CC=gcc prefix=/gnu/store/...-<out>
+
+   This sets the C compiler to ‘gcc’ and the ‘prefix’ variable (the
+installation directory in Make parlance) to ‘(assoc-ref %outputs
+"out")’, which is a build-stage global variable pointing to the
+destination directory in the store (something like
+‘/gnu/store/...-my-libgit2-20180408’).
+
+   Auf gleiche Art kann man auch die Befehlszeilenoptionen für configure
+festlegen:
+
+     #:configure-flags '("-DUSE_SHA1DC=ON")
+
+   Die Variable ‘%build-inputs’ wird auch in diesem Sichtbarkeitsbereich
+erzeugt. Es handelt sich um eine assoziative Liste, die von den Namen
+der Eingaben auf ihre Verzeichnisse im Store abbildet.
+
+   Das ‘phases’-Schlüsselwort listet der Reihe nach die vom
+Erstellungssystem durchgeführten Schritte auf. Zu den üblichen Phasen
+gehören ‘unpack’, ‘configure’, ‘build’, ‘install’ und ‘check’. Um mehr
+über diese Phasen zu lernen, müssen Sie sich die Definition des
+zugehörigen Erstellungssystems in
+‘$GUIX_CHECKOUT/guix/build/gnu-build-system.scm’ anschauen:
+
+     (define %standard-phases
+       ;; Standard build phases, as a list of symbol/procedure pairs.
+       (let-syntax ((phases (syntax-rules ()
+                              ((_ p ...) `((p . ,p) ...)))))
+         (phases set-SOURCE-DATE-EPOCH set-paths install-locale unpack
+                 bootstrap
+                 patch-usr-bin-file
+                 patch-source-shebangs configure patch-generated-file-shebangs
+                 build check install
+                 patch-shebangs strip
+                 validate-runpath
+                 validate-documentation-location
+                 delete-info-dir-file
+                 patch-dot-desktop-files
+                 install-license-files
+                 reset-gzip-timestamps
+                 compress-documentation)))
+
+   Alternativ auf einer REPL:
+
+     (add-to-load-path "/path/to/guix/checkout")
+     ,use (guix build gnu-build-system)
+     (map first %standard-phases)
+     ⇒ (set-SOURCE-DATE-EPOCH set-paths install-locale unpack bootstrap patch-usr-bin-file patch-source-shebangs configure patch-generated-file-shebangs build check install patch-shebangs strip validate-runpath validate-documentation-location delete-info-dir-file patch-dot-desktop-files install-license-files reset-gzip-timestamps compress-documentation)
+
+   Wenn Sie mehr darüber wissen wollen, was in diesen Phasen passiert,
+schauen Sie in den jeweiligen Prozeduren.
+
+   Beispielsweise sieht momentan, als dies hier geschrieben wurde, die
+Definition von ‘unpack’ für das GNU-Erstellungssystem so aus:
+
+     (define* (unpack #:key source #:allow-other-keys)
+       "Unpack SOURCE in the working directory, and change directory within the
+     source.  When SOURCE is a directory, copy it in a sub-directory of the current
+     working directory."
+       (if (file-is-directory? source)
+           (begin
+             (mkdir "source")
+             (chdir "source")
+
+             ;; Preserve timestamps (set to the Epoch) on the copied tree so that
+             ;; things work deterministically.
+             (copy-recursively source "."
+                               #:keep-mtime? #t))
+           (begin
+             (if (string-suffix? ".zip" source)
+                 (invoke "unzip" source)
+                 (invoke "tar" "xvf" source))
+             (chdir (first-subdirectory "."))))
+       #t)
+
+   Beachten Sie den Aufruf von ‘chdir’: Damit wird das
+Arbeitsverzeichnis zu demjenigen gewechselt, wohin die Quelldateien
+entpackt wurden. In jeder Phase nach ‘unpack’ dient also das Verzeichnis
+mit den Quelldateien als Arbeitsverzeichnis. Deswegen können wir direkt
+mit den Quelldateien arbeiten, zumindest solange keine spätere Phase das
+Arbeitsverzeichnis woandershin wechselt.
+
+   Die Liste der ‘%standard-phases’ des Erstellungssystems ändern wir
+mit Hilfe des ‘modify-phases’-Makros über eine Liste von Änderungen. Sie
+kann folgende Formen haben:
+
+   • ‘(add-before PHASE NEUE-PHASE PROZEDUR)’: Die ‘PROZEDUR’ namens
+     ‘NEUE-PHASE’ vor ‘PHASE’ ausführen.
+   • ‘(add-after PHASE NEUE-PHASE PROZEDUR)’: Genauso, aber danach.
+   • ‘(replace PHASE PROZEDUR)’.
+   • ‘(delete PHASE)’.
+
+   Die ‘PROZEDUR’ unterstützt die Schlüsselwortargumente ‘inputs’ und
+‘outputs’. Jede Eingabe (ob sie _native_, _propagated_ oder nichts davon
+ist) und jedes Ausgabeverzeichnis ist in diesen Variablen mit dem
+jeweiligen Namen assoziiert. ‘(assoc-ref outputs "out")’ ist also das
+Store-Verzeichnis der Hauptausgabe des Pakets. Eine Phasenprozedur kann
+so aussehen:
+
+     (lambda* (#:key inputs outputs #:allow-other-keys)
+       (let (((bash-directory (assoc-ref inputs "bash"))
+              (output-directory (assoc-ref outputs "out"))
+              (doc-directory (assoc-ref outputs "doc"))
+       ; ...
+       #t)
+
+   Die Prozedur muss bei Erfolg ‘#t’ zurückliefern. Auf den Rückgabewert
+des letzten Ausdrucks, mit dem die Phase angepasst wurde, kann man sich
+nicht verlassen, weil es keine Garantie gibt, dass der Rückgabewert ‘#t’
+sein wird. Deswegen schreiben wir dahinter ‘#t’, damit bei erfolgreicher
+Ausführung der richtige Wert geliefert wird.
+
+2.1.3.6 Code-Staging
+....................
+
+Aufmerksame Leser könnten die Syntax mit ‘quasiquote’ und Komma im
+Argumentefeld bemerkt haben. Tatsächlich sollte der Erstellungscode in
+der Paketdeklaration _nicht_ auf Client-Seite ausgeführt werden, sondern
+erst, wenn er an den Guix-Daemon übergeben worden ist. Der Mechanismus,
+über den Code zwischen zwei laufenden Prozessen weitergegeben wird,
+nennen wir Code-Staging (https://arxiv.org/abs/1709.00833).
+
+2.1.3.7 Hilfsfunktionen
+.......................
+
+When customizing ‘phases’, we often need to write code that mimics the
+equivalent system invocations (‘make’, ‘mkdir’, ‘cp’, etc.) commonly
+used during regular “Unix-style” installations.
+
+   Manche, wie ‘chmod’, sind Teil von Guile. Siehe das *note (guile)::
+für eine vollständige Liste.
+
+   Guix stellt zusätzliche Hilfsfunktionen zur Verfügung, die bei der
+Paketverwaltung besonders praktisch sind.
+
+   Manche dieser Funktionalitäten finden Sie in
+‘$GUIX_CHECKOUT/guix/guix/build/utils.scm’. Die meisten spiegeln das
+Verhalten traditioneller Unix-Systembefehle wider:
+
+which
+     Das Gleiche wie der ‘which’-Systembefehl.
+find-files
+     Wie der ‘find’ Systembefehl.
+mkdir-p
+     Wie ‘mkdir -p’, das Elternverzeichnisse erzeugt, wenn nötig.
+install-file
+     Ähnlich wie ‘install’ beim Installieren einer Datei in ein (nicht
+     unbedingt existierendes) Verzeichnis. Guile kennt ‘copy-file’, das
+     wie ‘cp’ funktioniert.
+copy-recursively
+     Wie ‘cp -r’.
+delete-file-recursively
+     Wie ‘rm -rf’.
+invoke
+     Eine ausführbare Datei ausführen. Man sollte es benutzen und nicht
+     ‘system*’.
+with-directory-excursion
+     Den Rumpf in einem anderen Arbeitsverzeichnis ausführen und danach
+     wieder in das vorherige Arbeitsverzeichnis wechseln.
+substitute*
+     Eine „‘sed’-artige“ Funktion.
+
+2.1.3.8 Modulpräfix
+...................
+
+Die Lizenz in unserem letzten Beispiel braucht ein Präfix. Der Grund
+liegt darin, wie das ‘license’-Modul importiert worden ist, nämlich
+‘#:use-module ((guix licenses) #:prefix license:)’. Der
+Importmechanismus von Guile-Modulen (siehe *note (guile)Using Guile
+Modules::) gibt Benutzern die volle Kontrolle über Namensräume. Man
+braucht sie, um Konflikte zu lösen, z.B. zwischen der ‘zlib’-Variablen
+aus ‘licenses.scm’ (dieser Wert repräsentiert eine _Softwarelizenz_) und
+der ‘zlib’-Variablen aus ‘compression.scm’ (ein Wert, der für ein
+_Paket_ steht).
+
+
+File: guix-cookbook.de.info,  Node: Andere Erstellungssysteme,  Next: Programmierbare und automatisierte Paketdefinition,  Prev: Erweitertes Beispiel,  Up: Anleitung zum Paketeschreiben
+
+2.1.4 Andere Erstellungssysteme
+-------------------------------
+
+Was wir bisher gesehen haben reicht für die meisten Pakete aus, die als
+Erstellungssystem etwas anderes als ‘trivial-build-system’ verwenden.
+Letzteres automatisiert gar nichts und überlässt es Ihnen, alles zur
+Erstellung manuell festzulegen. Das kann einen noch mehr beanspruchen
+und wir beschreiben es hier zur Zeit nicht, aber glücklicherweise
+braucht man dieses System auch nur in seltenen Fällen.
+
+   Bei anderen Erstellungssystemen wie ASDF, Emacs, Perl, Ruby und
+vielen anderen ist der Prozess sehr ähnlich zum GNU-Erstellungssystem
+abgesehen von ein paar speziellen Argumenten.
+
+   Siehe *note (guix.de)Erstellungssysteme::, für mehr Informationen
+über Erstellungssysteme, oder den Quellcode in den Verzeichnissen
+‘$GUIX_CHECKOUT/guix/build’ und ‘$GUIX_CHECKOUT/guix/build-system’.
+
+
+File: guix-cookbook.de.info,  Node: Programmierbare und automatisierte Paketdefinition,  Next: Hilfe bekommen,  Prev: Andere Erstellungssysteme,  Up: Anleitung zum Paketeschreiben
+
+2.1.5 Programmierbare und automatisierte Paketdefinition
+--------------------------------------------------------
+
+Wir können es nicht oft genug wiederholen: Eine
+Allzweck-Programmiersprache zur Hand zu haben macht Dinge möglich, die
+traditionelle Paketverwaltung weit übersteigen.
+
+   Wir können uns das anhand Guix’ großartiger Funktionalitäten
+klarmachen!
+
+* Menu:
+
+* Rekursive Importer::
+* Automatisch aktualisieren::
+* Vererbung::
+
+
+File: guix-cookbook.de.info,  Node: Rekursive Importer,  Next: Automatisch aktualisieren,  Up: Programmierbare und automatisierte Paketdefinition
+
+2.1.5.1 Rekursive Importer
+..........................
+
+Sie könnten feststellen, dass manche Erstellungssysteme gut genug sind
+und nichts weiter zu tun bleibt, um ein Paket zu verfassen. Das
+Paketeschreiben kann so monoton werden und man wird dessen bald
+überdrüssig. Eine Daseinsberechtigung von Rechnern ist, Menschen bei
+solch langweiligen Aufgaben zu ersetzen. Lasst uns also Guix die Sache
+erledigen: Wir lassen uns die Paketdefinition eines R-Pakets mit den
+Informationen aus CRAN holen (was zu anderen ausgegeben wird, haben wir
+im Folgenden weggelassen):
+
+     $ guix import cran --recursive walrus
+
+     (define-public r-mc2d
+         ; …
+         (license gpl2+)))
+
+     (define-public r-jmvcore
+         ; …
+         (license gpl2+)))
+
+     (define-public r-wrs2
+         ; …
+         (license gpl3)))
+
+     (define-public r-walrus
+       (package
+         (name "r-walrus")
+         (version "1.0.3")
+         (source
+           (origin
+             (method url-fetch)
+             (uri (cran-uri "walrus" version))
+             (sha256
+               (base32
+                 "1nk2glcvy4hyksl5ipq2mz8jy4fss90hx6cq98m3w96kzjni6jjj"))))
+         (build-system r-build-system)
+         (propagated-inputs
+           `(("r-ggplot2" ,r-ggplot2)
+             ("r-jmvcore" ,r-jmvcore)
+             ("r-r6" ,r-r6)
+             ("r-wrs2" ,r-wrs2)))
+         (home-page "https://github.com/jamovi/walrus")
+         (synopsis "Robust Statistical Methods")
+         (description
+           "This package provides a toolbox of common robust statistical
+     tests, including robust descriptives, robust t-tests, and robust ANOVA.
+     It is also available as a module for 'jamovi' (see
+     <https://www.jamovi.org> for more information).  Walrus is based on the
+     WRS2 package by Patrick Mair, which is in turn based on the scripts and
+     work of Rand Wilcox.  These analyses are described in depth in the book
+     'Introduction to Robust Estimation & Hypothesis Testing'.")
+         (license gpl3)))
+
+   Der rekursive Importer wird keine Pakete importieren, für die es in
+Guix bereits eine Paketdefinition gibt, außer dem Paket, mit dem er
+anfängt.
+
+   Nicht für alle Anwendungen können auf diesem Weg Pakete erzeugt
+werden, nur für jene, die auf ausgewählten Systemen aufbauen. Im
+Handbuch können Sie Informationen über die vollständige Liste aller
+Importer bekommen (siehe *note (guix.de)Aufruf von guix import::).
+
+
+File: guix-cookbook.de.info,  Node: Automatisch aktualisieren,  Next: Vererbung,  Prev: Rekursive Importer,  Up: Programmierbare und automatisierte Paketdefinition
+
+2.1.5.2 Automatisch aktualisieren
+.................................
+
+Guix ist klug genug, um verfügbare Aktualisierungen auf bekannten
+Systemen zu erkennen. Es kann über veraltete Paketdefinitionen Bericht
+erstatten, wenn man dies eingibt:
+
+     $ guix refresh hello
+
+   In den meisten Fällen muss man zur Aktualisierung auf eine neuere
+Version wenig mehr tun, als die Versionsnummer und die Prüfsumme ändern.
+Auch das kann mit Guix automatisiert werden:
+
+     $ guix refresh hello --update
+
+
+File: guix-cookbook.de.info,  Node: Vererbung,  Prev: Automatisch aktualisieren,  Up: Programmierbare und automatisierte Paketdefinition
+
+2.1.5.3 Vererbung
+.................
+
+Wenn Sie anfangen, bestehende Paketdefinitionen anzuschauen, könnte es
+Ihnen auffallen, dass viele von ihnen über ein ‘inherit’-Feld verfügen.
+
+     (define-public adwaita-icon-theme
+       (package (inherit gnome-icon-theme)
+         (name "adwaita-icon-theme")
+         (version "3.26.1")
+         (source (origin
+                   (method url-fetch)
+                   (uri (string-append "mirror://gnome/sources/" name "/"
+                                       (version-major+minor version) "/"
+                                       name "-" version ".tar.xz"))
+                   (sha256
+                    (base32
+                     "17fpahgh5dyckgz7rwqvzgnhx53cx9kr2xw0szprc6bnqy977fi8"))))
+         (native-inputs
+          `(("gtk-encode-symbolic-svg" ,gtk+ "bin")))))
+
+   Alle _nicht_ aufgeführten Felder werden vom Elternpaket geerbt. Das
+ist ziemlich praktisch, um alternative Pakete zu erzeugen, zum Beispiel
+solche mit geänderten Quellorten, Versionen oder Kompilierungsoptionen.
+
+
+File: guix-cookbook.de.info,  Node: Hilfe bekommen,  Next: Schlusswort,  Prev: Programmierbare und automatisierte Paketdefinition,  Up: Anleitung zum Paketeschreiben
+
+2.1.6 Hilfe bekommen
+--------------------
+
+Leider ist es für manche Anwendungen schwierig, Pakete zu schreiben.
+Manchmal brauchen sie einen Patch, um mit vom Standard abweichenden
+Dateisystemhierarchien klarzukommen, wie sie der Store erforderlich
+macht. Manchmal funktionieren die Tests nicht richtig. (Man kann sie
+überspringen, aber man sollte nicht.) Ein andermal ist das sich
+ergebende Paket nicht reproduzierbar.
+
+   Wenn Sie nicht weiterkommen, weil Sie nicht wissen, wie Sie ein
+Problem beim Paketschreiben lösen können, dann zögern Sie nicht, die
+Gemeinde um Hilfe zu bitten.
+
+   Siehe die Homepage von Guix
+(https://www.gnu.org/software/guix/contact/) für Informationen, welche
+Mailing-Listen, IRC-Kanäle etc. bereitstehen.
+
+
+File: guix-cookbook.de.info,  Node: Schlusswort,  Next: Literaturverzeichnis,  Prev: Hilfe bekommen,  Up: Anleitung zum Paketeschreiben
+
+2.1.7 Schlusswort
+-----------------
+
+Diese Anleitung hat einen Überblick über die fortgeschrittene
+Paketverwaltung gegeben, die Guix vorweist. Zu diesem Zeitpunkt haben
+wir diese Einführung größtenteils auf das ‘gnu-build-system’
+eingeschränkt, was eine zentrale Abstraktionsschicht darstellt, auf der
+weitere Abstraktionen aufbauen.
+
+   Wie geht es nun weiter? Als Nächstes müssten wir das
+Erstellungssystem in seine Bestandteile zerlegen, um einen Einblick ganz
+ohne Abstraktionen zu bekommen. Das bedeutet, wir müssten das
+‘trivial-build-system’ analysieren. Dadurch sollte ein gründliches
+Verständnis des Prozesses vermittelt werden, bevor wir höher entwickelte
+Paketierungstechniken und Randfälle untersuchen.
+
+   Andere Funktionalitäten, die es wert sind, erkundet zu werden, sind
+Guix’ Funktionalitäten zum interaktiven Editieren und zur Fehlersuche,
+die die REPL von Guile darbietet.
+
+   Diese eindrucksvollen Funktionalitäten sind völlig optional und
+können warten; jetzt ist die Zeit für eine wohlverdiente Pause. Mit dem
+Wissen, in das wir hier eingeführt haben, sollten Sie für das Paketieren
+vieler Programme gut gerüstet sein. Sie können gleich anfangen und
+hoffentlich bekommen wir bald Ihre Beiträge zu sehen!
+
+
+File: guix-cookbook.de.info,  Node: Literaturverzeichnis,  Prev: Schlusswort,  Up: Anleitung zum Paketeschreiben
+
+2.1.8 Literaturverzeichnis
+--------------------------
+
+   • Die Paketreferenz im Handbuch
+     (https://guix.gnu.org/manual/de/html_node/Pakete-definieren.html)
+
+   • Pjotr’s Hacking-Leitfaden für GNU Guix
+     (https://gitlab.com/pjotrp/guix-notes/blob/master/HACKING.org)
+
+   • „GNU Guix: Package without a scheme!“
+     (https://www.gnu.org/software/guix/guix-ghm-andreas-20130823.pdf)
+     von Andreas Enge
+
+
+File: guix-cookbook.de.info,  Node: Systemkonfiguration,  Next: Fortgeschrittene Paketverwaltung,  Prev: Paketerstellung,  Up: Top
+
+3 Systemkonfiguration
+*********************
+
+Guix stellt eine flexible Sprache bereit, um Ihr „Guix System“ auf
+deklarative Weise zu konfigurieren. Diese Flexibilität kann einen
+manchmal überwältigen. Dieses Kapitel hat den Zweck, einige
+fortgeschrittene Konfigurationskonzepte vorzuzeigen.
+
+   Siehe *note (guix.de)Systemkonfiguration:: für eine vollständige
+Referenz.
+
+* Menu:
+
+* Den Kernel anpassen::      Einen eigenen Linux-Kernel auf Guix System
+                               erzeugen und benutzen.
+* Customizing a Window Manager::  Handle customization of a Window manager
+                                    on Guix System.
+* Setting up a bind mount::  Setting up a bind mount in the file-systems
+                               definition.
+
+
+File: guix-cookbook.de.info,  Node: Den Kernel anpassen,  Next: Customizing a Window Manager,  Up: Systemkonfiguration
+
+3.1 Den Kernel anpassen
+=======================
+
+Im Kern ist Guix eine quellcodebasierte Distribution mit Substituten
+(siehe *note (guix.de)Substitute::), daher ist das Erstellen von Paketen
+aus ihrem Quellcode heraus genauso vorgesehen wie die normale
+Installation und Aktualisierung von Paketen. Von diesem Standpunkt ist
+es sinnvoll, zu versuchen, den Zeitaufwand für das Kompilieren von
+Paketen zu senken, und kürzliche Neuerungen sowie Verbesserungen beim
+Erstellen und Verteilen von Substituten bleiben ein Diskussionsthema
+innerhalb von Guix.
+
+   Der Kernel braucht zwar keine übermäßigen Mengen an Arbeitsspeicher
+beim Erstellen, jedoch jede Menge Zeit auf einer durchschnittlichen
+Maschine. Die offizielle Konfiguration des Kernels umfasst, wie bei
+anderen GNU/Linux-Distributionen auch, besser zu viel als zu wenig. Das
+ist der eigentliche Grund, warum seine Erstellung so lange dauert, wenn
+man den Kernel aus dem Quellcode heraus erstellt.
+
+   Man kann den Linux-Kernel jedoch auch als ganz normales Paket
+beschreiben, das genau wie jedes andere Paket angepasst werden kann. Der
+Vorgang ist ein klein wenig anders, aber das liegt hauptsächlich an der
+Art, wie die Paketdefinition geschrieben ist.
+
+   Die ‘linux-libre’-Kernelpaketdefinition ist tatsächlich eine
+Prozedur, die ein Paket liefert.
+
+     (define* (make-linux-libre version hash supported-systems
+                                #:key
+                                ;; A function that takes an arch and a variant.
+                                ;; See kernel-config for an example.
+                                (extra-version #f)
+                                (configuration-file #f)
+                                (defconfig "defconfig")
+                                (extra-options %default-extra-linux-options)
+                                (patches (list %boot-logo-patch)))
+       ...)
+
+   Das momentane ‘linux-libre’-Paket zielt ab auf die 5.1.x-Serie und
+ist wie folgt deklariert:
+
+     (define-public linux-libre
+       (make-linux-libre %linux-libre-version
+                         %linux-libre-hash
+                         '("x86_64-linux" "i686-linux" "armhf-linux" "aarch64-linux")
+                         #:patches %linux-libre-5.1-patches
+                         #:configuration-file kernel-config))
+
+   Alle Schlüssel, denen kein Wert zugewiesen wird, erben ihren
+Vorgabewert von der Definition von ‘make-linux-libre’. Wenn Sie die
+beiden Schnipsel oben vergleichen, könnte Ihnen auffallen, dass sich der
+Code-Kommentar in ersterem tatsächlich _nicht_ auf das
+‘#:extra-version’-Schlüsselwort bezieht, sondern auf
+‘#:configuration-file’. Deswegen ist es nicht so leicht, aus der
+Definition heraus eine eigene Kernel-Konfiguration anhand der Definition
+zu schreiben, aber keine Sorge, es gibt andere Möglichkeiten, um mit dem
+zu arbeiten, was uns gegeben wurde.
+
+   Es gibt zwei Möglichkeiten, einen Kernel mit eigener
+Kernel-Konfiguration zu erzeugen. Die erste ist, eine normale
+‘.config’-Datei als native Eingabe zu unserem angepassten Kernel
+hinzuzufügen. Im Folgenden sehen Sie ein Schnipsel aus der angepassten
+‘'configure’-Phase der ‘make-linux-libre’-Paketdefinition:
+
+     (let ((build  (assoc-ref %standard-phases 'build))
+           (config (assoc-ref (or native-inputs inputs) "kconfig")))
+
+       ;; Use a custom kernel configuration file or a default
+       ;; configuration file.
+       (if config
+           (begin
+             (copy-file config ".config")
+             (chmod ".config" #o666))
+           (invoke "make" ,defconfig))
+
+   Nun folgt ein Beispiel-Kernel-Paket. Das ‘linux-libre’-Paket ist
+nicht anders als andere Pakete und man kann von ihm erben und seine
+Felder ersetzen wie bei jedem anderen Paket.
+
+     (define-public linux-libre/E2140
+       (package
+         (inherit linux-libre)
+         (native-inputs
+          `(("kconfig" ,(local-file "E2140.config"))
+           ,@(alist-delete "kconfig"
+                           (package-native-inputs linux-libre))))))
+
+   Im selben Verzeichnis wie die Datei, die ‘linux-libre-E2140’
+definiert, befindet sich noch eine Datei namens ‘E2140.config’, bei der
+es sich um eine richtige Kernel-Konfigurationsdatei handelt. Das
+Schlüsselwort ‘defconfig’ von ‘make-linux-libre’ wird hier leer
+gelassen, so dass die einzige Kernel-Konfiguration im Paket die im
+‘native-inputs’-Feld ist.
+
+   Die zweite Möglichkeit, einen eigenen Kernel zu erzeugen, ist, einen
+neuen Wert an das ‘extra-options’-Schlüsselwort der
+‘make-linux-libre’-Prozedur zu übergeben. Das
+‘extra-options’-Schlüsselwort wird zusammen mit einer anderen, direkt
+darunter definierten Funktion benutzt:
+
+     (define %default-extra-linux-options
+       `(;; https://lists.gnu.org/archive/html/guix-devel/2014-04/msg00039.html
+        ("CONFIG_DEVPTS_MULTIPLE_INSTANCES" . #t)
+        ;; Modules required for initrd:
+        ("CONFIG_NET_9P" . m)
+        ("CONFIG_NET_9P_VIRTIO" . m)
+        ("CONFIG_VIRTIO_BLK" . m)
+        ("CONFIG_VIRTIO_NET" . m)
+        ("CONFIG_VIRTIO_PCI" . m)
+        ("CONFIG_VIRTIO_BALLOON" . m)
+        ("CONFIG_VIRTIO_MMIO" . m)
+        ("CONFIG_FUSE_FS" . m)
+        ("CONFIG_CIFS" . m)
+        ("CONFIG_9P_FS" . m)))
+
+     (define (config->string options)
+       (string-join (map (match-lambda
+                           ((option . 'm)
+                            (string-append option "=m"))
+                           ((option . #t)
+                            (string-append option "=y"))
+                           ((option . #f)
+                            (string-append option "=n")))
+                         options)
+                    "\n"))
+
+   Und im eigenen configure-Skript des „make-linux-libre“-Pakets:
+
+     ;; Appending works even when the option wasn't in the
+     ;; file.  The last one prevails if duplicated.
+     (let ((port (open-file ".config" "a"))
+           (extra-configuration ,(config->string extra-options)))
+       (display extra-configuration port)
+       (close-port port))
+
+     (invoke "make" "oldconfig"))))
+
+   Indem wir also kein „configuration-file“ mitgeben, ist ‘.config’
+anfangs leer und danach schreiben wir dort die Sammlung der gewünschten
+Optionen („Flags“) hinein. Hier ist noch ein eigener Kernel:
+
+     (define %macbook41-full-config
+       (append %macbook41-config-options
+               %filesystems
+               %efi-support
+               %emulation
+               (@@ (gnu packages linux) %default-extra-linux-options)))
+
+     (define-public linux-libre-macbook41
+       ;; XXX: Auf die interne 'make-linux-libre'-Prozedur zugreifen, welche privat
+       ;; ist und nicht exportiert, desweiteren kann sie sich in Zukunft ändern.
+       ((@@ (gnu packages linux) make-linux-libre) (@@ (gnu packages linux) %linux-libre-version)
+                           (@@ (gnu packages linux) %linux-libre-hash)
+                           '("x86_64-linux")
+                           #:extra-version "macbook41"
+                           #:patches (@@ (gnu packages linux) %linux-libre-5.1-patches)
+                           #:extra-options %macbook41-config-options))
+
+   Im obigen Beispiel ist ‘%filesystems’ eine Sammlung solcher „Flags“,
+mit denen Unterstützung für verschiedene Dateisysteme aktiviert wird,
+‘%efi-support’ aktiviert Unterstützung für EFI und ‘%emulation’
+ermöglicht es einer x86_64-linux-Maschine, auch im 32-Bit-Modus zu
+arbeiten. Die ‘%default-extra-linux-options’ sind die oben zitierten,
+die wieder hinzugefügt werden mussten, weil sie durch das
+‘extra-options’-Schlüsselwort ersetzt worden waren.
+
+   All das klingt machbar, aber woher weiß man überhaupt, welche Module
+für ein bestimmtes System nötig sind? Es gibt zwei hilfreiche
+Anlaufstellen, zum einen das Gentoo-Handbuch
+(https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Kernel), zum
+anderen die Dokumentation des Kernels selbst
+(https://www.kernel.org/doc/html/latest/admin-guide/README.html?highlight=localmodconfig).
+Aus der Kernel-Dokumentation erfahren wir, dass ‘make localmodconfig’
+der Befehl sein könnte, den wir wollen.
+
+   Um ‘make localmodconfig’ auch tatsächlich ausführen zu können, müssen
+wir zunächst den Quellcode des Kernels holen und entpacken:
+
+     tar xf $(guix build linux-libre --source)
+
+   Sobald wir im Verzeichnis mit dem Quellcode sind, führen Sie ‘touch
+.config’ aus, um mit einer ersten, leeren ‘.config’ anzufangen. ‘make
+localmodconfig’ funktioniert so, dass angeschaut wird, was bereits in
+Ihrer ‘.config’ steht, und Ihnen mitgeteilt wird, was Ihnen noch fehlt.
+Wenn die Datei leer bleibt, fehlt eben alles. Der nächste Schritt ist,
+das hier auszuführen:
+
+     guix environment linux-libre -- make localmodconfig
+
+   und uns die Ausgabe davon anzuschauen. Beachten Sie, dass die
+‘.config’-Datei noch immer leer ist. Die Ausgabe enthält im Allgemeinen
+zwei Arten von Warnungen. Am Anfang der ersten steht „WARNING“ und in
+unserem Fall können wir sie tatsächlich ignorieren. Bei der zweiten
+heißt es:
+
+     module pcspkr did not have configs CONFIG_INPUT_PCSPKR
+
+   Für jede solche Zeile kopieren Sie den ‘CONFIG_XXXX_XXXX’-Teil in die
+‘.config’ im selben Verzeichnis und hängen ‘=m’ an, damit es am Ende so
+aussieht:
+
+     CONFIG_INPUT_PCSPKR=m
+     CONFIG_VIRTIO=m
+
+   Nachdem Sie alle Konfigurationsoptionen kopiert haben, führen Sie
+noch einmal ‘make localmodconfig’ aus, um sicherzugehen, dass es keine
+Ausgaben mehr gibt, deren erstes Wort „module“ ist. Zusätzlich zu diesen
+maschinenspezifischen Modulen gibt es noch ein paar mehr, die Sie auch
+brauchen. ‘CONFIG_MODULES’ brauchen Sie, damit Sie Module getrennt
+erstellen und laden können und nicht alles im Kernel eingebaut sein
+muss. Sie brauchen auch ‘CONFIG_BLK_DEV_SD’, um von Festplatten lesen zu
+können. Möglicherweise gibt es auch sonst noch Module, die Sie brauchen
+werden.
+
+   Die Absicht hinter dem hier Niedergeschriebenen ist _nicht_, eine
+Anleitung zum Konfigurieren eines eigenen Kernels zu sein. Wenn Sie also
+vorhaben, den Kernel an Ihre ganz eigenen Bedürfnisse anzupassen, werden
+Sie in anderen Anleitungen fündig.
+
+   Die zweite Möglichkeit, die Kernel-Konfiguration einzurichten,
+benutzt mehr von Guix’ Funktionalitäten und sie ermöglicht es Ihnen,
+Gemeinsamkeiten von Konfigurationen zwischen verschiedenen Kernels zu
+teilen. Zum Beispiel wird eine Reihe von EFI-Konfigurationsoptionen von
+allen Maschinen, die EFI benutzen, benötigt. Wahrscheinlich haben all
+diese Kernel eine Schnittmenge zu unterstützender Dateisysteme. Indem
+Sie Variable benutzen, können Sie leicht auf einen Schlag sehen, welche
+Funktionalitäten aktiviert sind, und gleichzeitig sicherstellen, dass
+Ihnen nicht Funktionalitäten des einen Kernels im anderen fehlen.
+
+   Was wir hierbei nicht erläutert haben, ist, wie Guix’ initrd und
+dessen Anpassung funktioniert. Wahrscheinlich werden Sie auf einer
+Maschine mit eigenem Kernel die initrd verändern müssen, weil sonst
+versucht wird, bestimmte Module in die initrd einzubinden, die Sie gar
+nicht erstellen haben lassen.
+
+
+File: guix-cookbook.de.info,  Node: Customizing a Window Manager,  Next: Setting up a bind mount,  Prev: Den Kernel anpassen,  Up: Systemkonfiguration
+
+3.2 Customizing a Window Manager
+================================
+
+* Menu:
+
+* StumpWM::
+* Session lock::
+
+
+File: guix-cookbook.de.info,  Node: StumpWM,  Next: Session lock,  Up: Customizing a Window Manager
+
+3.2.1 StumpWM
+-------------
+
+You could install StumpWM with a Guix system by adding ‘stumpwm’ and
+optionally ‘`(,stumpwm "lib")’ packages to a system configuration file,
+e.g. ‘/etc/config.scm’.
+
+   An example configuration can look like this:
+
+     (use-modules (gnu))
+     (use-package-modules wm)
+
+     (operating-system
+       ;; …
+       (packages (append (list sbcl stumpwm `(,stumpwm "lib"))
+                         %base-packages)))
+
+   By default StumpWM uses X11 fonts, which could be small or pixelated
+on your system. You could fix this by installing StumpWM contrib Lisp
+module ‘sbcl-ttf-fonts’, adding it to Guix system packages:
+
+     (use-modules (gnu))
+     (use-package-modules fonts wm)
+
+     (operating-system
+       ;; …
+       (packages (append (list sbcl stumpwm `(,stumpwm "lib"))
+                         sbcl-ttf-fonts font-dejavu %base-packages)))
+
+   Then you need to add the following code to a StumpWM configuration
+file ‘~/.stumpwm.d/init.lisp’:
+
+     (require :ttf-fonts)
+     (setf xft:*font-dirs* '("/run/current-system/profile/share/fonts/"))
+     (setf clx-truetype:+font-cache-filename+ (concat (getenv "HOME") "/.fonts/font-cache.sexp"))
+     (xft:cache-fonts)
+     (set-font (make-instance 'xft:font :family "DejaVu Sans Mono" :subfamily "Book" :size 11))
+
+
+File: guix-cookbook.de.info,  Node: Session lock,  Prev: StumpWM,  Up: Customizing a Window Manager
+
+3.2.2 Session lock
+------------------
+
+Depending on your environment, locking the screen of your session might
+come built in or it might be something you have to set up yourself. If
+you use a desktop environment like GNOME or KDE, it’s usually built in.
+If you use a plain window manager like StumpWM or EXWM, you might have
+to set it up yourself.
+
+* Menu:
+
+* Xorg::
+
+
+File: guix-cookbook.de.info,  Node: Xorg,  Up: Session lock
+
+3.2.2.1 Xorg
+............
+
+If you use Xorg, you can use the utility xss-lock
+(https://www.mankier.com/1/xss-lock) to lock the screen of your session.
+xss-lock is triggered by DPMS which since Xorg 1.8 is auto-detected and
+enabled if ACPI is also enabled at kernel runtime.
+
+   To use xss-lock, you can simple execute it and put it into the
+background before you start your window manager from e.g. your
+‘~/.xsession’:
+
+     xss-lock -- slock &
+     exec stumpwm
+
+   In this example, xss-lock uses ‘slock’ to do the actual locking of
+the screen when it determines it’s appropriate, like when you suspend
+your device.
+
+   For slock to be allowed to be a screen locker for the graphical
+session, it needs to be made setuid-root so it can authenticate users,
+and it needs a PAM service. This can be achieved by adding the following
+service to your ‘config.scm’:
+
+     (screen-locker-service slock)
+
+   If you manually lock your screen, e.g. by directly calling slock when
+you want to lock your screen but not suspend it, it’s a good idea to
+notify xss-lock about this so no confusion occurs. This can be done by
+executing ‘xset s activate’ immediately before you execute slock.
+
+
+File: guix-cookbook.de.info,  Node: Setting up a bind mount,  Prev: Customizing a Window Manager,  Up: Systemkonfiguration
+
+3.3 Setting up a bind mount
+===========================
+
+To bind mount a file system, one must first set up some definitions
+before the ‘operating-system’ section of the system definition. In this
+example we will bind mount a folder from a spinning disk drive to
+‘/tmp’, to save wear and tear on the primary SSD, without dedicating an
+entire partition to be mounted as ‘/tmp’.
+
+   First, the source drive that hosts the folder we wish to bind mount
+should be defined, so that the bind mount can depend on it.
+
+     (define source-drive ;; "source-drive" can be named anything you want.
+        (file-system
+         (device (uuid "UUID goes here"))
+         (mount-point "/path-to-spinning-disk-goes-here")
+         (type "ext4"))) ;; Make sure to set this to the appropriate type for your drive.
+
+   The source folder must also be defined, so that guix will know it’s
+not a regular block device, but a folder.
+     (define (%source-directory) "/path-to-spinning-disk-goes-here/tmp") ;; "source-directory" can be named any valid variable name.
+
+   Finally, inside the ‘file-systems’ definition, we must add the mount
+itself.
+
+     (file-systems (cons*
+
+                     ...<other drives omitted for clarity>...
+
+                     source-drive ;; Must match the name you gave the source drive in the earlier definition.
+
+                     (file-system
+                      (device (%source-directory)) ;; Make sure "source-directory" matches your earlier definition.
+                      (mount-point "/tmp")
+                      (type "none") ;; We are mounting a folder, not a partition, so this type needs to be "none"
+                      (flags '(bind-mount))
+                      (dependencies (list source-drive)) ;; Ensure "source-drive" matches what you've named the variable for the drive.
+                      )
+
+                      ...<other drives omitted for clarity>...
+
+                     ))
+
+
+File: guix-cookbook.de.info,  Node: Fortgeschrittene Paketverwaltung,  Next: Danksagungen,  Prev: Systemkonfiguration,  Up: Top
+
+4 Fortgeschrittene Paketverwaltung
+**********************************
+
+Guix ist ein funktionales Paketverwaltungsprogramm, das weit mehr
+Funktionalitäten als traditionelle Paketverwalter anbietet. Für nicht
+Eingeweihte sind deren Anwendungsfälle nicht sofort ersichtlich. Dieses
+Kapitel ist dazu da, manche fortgeschrittenen Paketverwaltungskonzepte
+zu demonstrieren.
+
+   Siehe *note (guix.de)Paketverwaltung:: für eine vollständige
+Referenz.
+
+* Menu:
+
+* Guix-Profile in der Praxis::  Strategien für mehrere Profile und
+                                  Manifeste.
+
+
+File: guix-cookbook.de.info,  Node: Guix-Profile in der Praxis,  Up: Fortgeschrittene Paketverwaltung
+
+4.1 Guix-Profile in der Praxis
+==============================
+
+Guix gibt uns eine sehr nützliche Funktionalität, die Neuankömmlingen
+sehr fremd sein dürfte: _Profile_. Mit ihnen kann man
+Paketinstallationen zusammenfassen und jeder Benutzer desselben Systems
+kann so viele davon anlegen, wie sie oder er möchte.
+
+   Ob Sie ein Entwickler sind oder nicht, Sie dürften feststellen, dass
+mehrere Profile ein mächtiges Werkzeug sind, das Sie flexibler macht.
+Zwar ist es ein gewisser Paradigmenwechsel verglichen mit
+_traditioneller Paketverwaltung_, doch sind sie sehr praktisch, sobald
+man im Umgang mit ihnen den Dreh ’raushat.
+
+   Wenn Ihnen Pythons ‘virtualenv’ vertraut ist, können Sie sich ein
+Profil als eine Art universelles ‘virtualenv’ vorstellen, das jede Art
+von Software enthalten kann und nicht nur Python-Software. Desweiteren
+sind Profile selbstversorgend: Sie schließen alle Laufzeitabhängigkeiten
+ein und garantieren somit, dass alle Programme innerhalb eines Profils
+stets zu jeder Zeit funktionieren werden.
+
+   Mehrere Profile bieten viele Vorteile:
+
+   • Klare semantische Trennung der verschiedenen Pakete, die ein Nutzer
+     für verschiedene Kontexte braucht.
+
+   • Mehrere Profile können in der Umgebung verfügbar gemacht werden,
+     entweder beim Anmelden oder in einer eigenen Shell.
+
+   • Profile können bei Bedarf geladen werden. Zum Beispiel kann der
+     Nutzer mehrere Unter-Shells benutzen, von denen jede ein anderes
+     Profil ausführt.
+
+   • Isolierung: Programme aus dem einen Profil werden keine Programme
+     aus dem anderen benutzen, und der Nutzer kann sogar verschiedene
+     Versionen desselben Programms in die zwei Profile installieren,
+     ohne dass es zu Konflikten kommt.
+
+   • Deduplizierung: Profile teilen sich Abhängigkeiten, wenn sie genau
+     gleich sind. Dadurch sind mehrere Profile speichereffizient.
+
+   • Reproduzierbar: Wenn man dafür deklarative Manifeste benutzt, kann
+     ein Profil allein durch den bei dessen Einrichtung aktiven
+     Guix-Commit eindeutig spezifiziert werden. Das bedeutet, dass man
+     genau dasselbe Profil jederzeit und überall einrichten kann
+     (https://guix.gnu.org/blog/2018/multi-dimensional-transactions-and-rollbacks-oh-my/)
+     und man dafür nur die Commit-Informationen braucht. Siehe den
+     Abschnitt über *note Reproduzierbare Profile::.
+
+   • Leichtere Aktualisierung und Wartung: Mit mehreren Profilen ist es
+     ein Leichtes, eine Liste von Paketen zur Hand zu haben und
+     Aktualisierungen völlig reibungslos ablaufen zu lassen.
+
+   Konkret wären diese hier typische Profile:
+
+   • Die Abhängigkeiten des Projekts, an dem Sie arbeiten.
+
+   • Die Bibliotheken Ihrer Lieblingsprogrammiersprache.
+
+   • Programme nur für Laptops (wie ‘powertop’), für die Sie auf einem
+     „Desktop“-Rechner keine Verwendung haben.
+
+   • TeXlive (das kann wirklich praktisch sein, wenn Sie nur ein
+     einziges Paket für dieses eine Dokument installieren müssen, das
+     Ihnen jemand in einer E-Mail geschickt hat).
+
+   • Spiele.
+
+   Tauchen wir ein in deren Einrichtung!
+
+* Menu:
+
+* Grundlegende Einrichtung über Manifeste::
+* Die nötigen Pakete::
+* Vorgabeprofil::
+* Der Vorteil von Manifesten::
+* Reproduzierbare Profile::
+
+
+File: guix-cookbook.de.info,  Node: Grundlegende Einrichtung über Manifeste,  Next: Die nötigen Pakete,  Up: Guix-Profile in der Praxis
+
+4.1.1 Grundlegende Einrichtung über Manifeste
+---------------------------------------------
+
+Ein Guix-Profil kann über eine sogenannte _Manifest-Spezifikation_
+eingerichtet werden. Das sieht etwa so aus:
+
+     (specifications->manifest
+       '("paket-1"
+         ;; Version 1.3 von paket-2.
+         "paket-2@1.3"
+         ;; Die "lib"-Ausgabe von paket-3.
+         "paket-3:lib"
+         ; …
+         "paket-N"))
+
+   Siehe *note (guix.de)Aufruf von guix package::, für Details zur
+Syntax.
+
+   Wir können eine Manifestspezifikation für jedes Profil schreiben und
+es auf diese Weise installieren:
+
+     GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+     mkdir -p "$GUIX_EXTRA_PROFILES"/my-project # wenn es noch nicht existiert
+     guix package --manifest=/pfad/zu/guix-my-project-manifest.scm --profile="$GUIX_EXTRA_PROFILES"/my-project/my-project
+
+   Hierbei haben wir eine beliebig benannte Variable
+‘GUIX_EXTRA_PROFILES’ eingerichtet, die auf das Verzeichnis verweist, wo
+wir unsere Profile für den Rest dieses Artikels speichern wollen.
+
+   Placing all your profiles in a single directory, with each profile
+getting its own sub-directory, is somewhat cleaner. This way, each
+sub-directory will contain all the symlinks for precisely one profile.
+Besides, “looping over profiles” becomes obvious from any programming
+language (e.g. a shell script) by simply looping over the
+sub-directories of ‘$GUIX_EXTRA_PROFILES’.
+
+   Beachten Sie, dass man auch eine Schleife über die Ausgabe von
+
+     guix package --list-profiles
+
+   although you’ll probably have to filter out ‘~/.config/guix/current’.
+
+   To enable all profiles on login, add this to your ‘~/.bash_profile’
+(or similar):
+
+     for i in $GUIX_EXTRA_PROFILES/*; do
+       profile=$i/$(basename "$i")
+       if [ -f "$profile"/etc/profile ]; then
+         GUIX_PROFILE="$profile"
+         . "$GUIX_PROFILE"/etc/profile
+       fi
+       unset profile
+     done
+
+   Note to Guix System users: the above reflects how your default
+profile ‘~/.guix-profile’ is activated from ‘/etc/profile’, that latter
+being loaded by ‘~/.bashrc’ by default.
+
+   Selbstverständlich können Sie sich auch dafür entscheiden, nur eine
+Teilmenge zu aktivieren:
+
+     for i in "$GUIX_EXTRA_PROFILES"/my-project-1 "$GUIX_EXTRA_PROFILES"/my-project-2; do
+       profile=$i/$(basename "$i")
+       if [ -f "$profile"/etc/profile ]; then
+         GUIX_PROFILE="$profile"
+         . "$GUIX_PROFILE"/etc/profile
+       fi
+       unset profile
+     done
+
+   Wenn ein Profil abgeschaltet ist, lässt es sich mit Leichtigkeit für
+eine bestimmte Shell aktivieren, ohne die restliche Benutzersitzung zu
+„verschmutzen“:
+
+     GUIX_PROFILE="pfad/zu/my-project" ; . "$GUIX_PROFILE"/etc/profile
+
+   Der Schlüssel dazu, wie man ein Profil aktiviert, ist dessen
+‘etc/profile’-Datei mit ‘source’ zu laden. Diese Datei enthält einige
+Shell-Befehle, um die für das Aktivieren der Software im Profil nötigen
+Umgebungsvariablen zu exportieren. Die Datei wird durch Guix automatisch
+erzeugt, um mit ‘source’ eingelesen zu werden. Sie enthält dieselben
+Variablen, die Sie nach Ausführung dieses Befehls bekämen:
+
+     guix package --search-paths=prefix --profile=$my_profile"
+
+   Siehe auch hier das *note (guix.de)Aufruf von guix package:: für die
+Befehlszeilenoptionen.
+
+   Um ein Profil zu aktualisieren, installieren Sie das Manifest einfach
+nochmal:
+
+     guix package -m /pfad/zu/guix-my-project-manifest.scm -p "$GUIX_EXTRA_PROFILES"/my-project/my-project
+
+   To upgrade all profiles, it’s easy enough to loop over them. For
+instance, assuming your manifest specifications are stored in
+‘~/.guix-manifests/guix-$profile-manifest.scm’, with ‘$profile’ being
+the name of the profile (e.g. "project1"), you could do the following in
+Bourne shell:
+
+     for profile in "$GUIX_EXTRA_PROFILES"/*; do
+       guix package --profile="$profile" --manifest="$HOME/.guix-manifests/guix-$profile-manifest.scm"
+     done
+
+   Jedes Profil verfügt über seine eigenen Generationen:
+
+     guix package -p "$GUIX_EXTRA_PROFILES"/my-project/my-project --list-generations
+
+   Sie können es auf jede Generation zurücksetzen:
+
+     guix package -p "$GUIX_EXTRA_PROFILES"/my-project/my-project --switch-generations=17
+
+   Zu guter Letzt ist es möglich, zu einem Profil zu wechseln ohne die
+aktuelle Umgebung zu erben, indem Sie es aus einer leeren Shell heraus
+aktivieren:
+
+     env -i $(which bash) --login --noprofile --norc
+     . my-project/etc/profile
+
+
+File: guix-cookbook.de.info,  Node: Die nötigen Pakete,  Next: Vorgabeprofil,  Prev: Grundlegende Einrichtung über Manifeste,  Up: Guix-Profile in der Praxis
+
+4.1.2 Die nötigen Pakete
+------------------------
+
+Das Aktivieren eines Profils bedeutet im Grunde, dass eine Menge
+Umgebungsvariabler exportiert wird. Diese Rolle fällt der
+‘etc/profile’-Datei innerhalb des Profils zu.
+
+   _Anmerkung: Nur diejenigen Umgebungsvariablen der sie gebrauchenden
+Pakete werden gesetzt._
+
+   Zum Beispiel wird kein ‘MANPATH’ gesetzt sein, wenn keine Anwendung
+im Profil diese „Man-Pages“ (Handbuchseiten) gebraucht. Wenn Sie also
+transparenten Zugriff auf Handbuchseiten brauchen, nachdem das Profil
+geladen wurde, dann gibt es zwei Möglichkeiten:
+
+   • Entweder Sie exportieren die Variablen von Hand, z.B.
+          export MANPATH=/path/to/profile${MANPATH:+:}$MANPATH
+
+   • Oder Sie schreiben ‘man-db’ in das Profilmanifest hinein.
+
+   Das Gleiche gilt für ‘INFOPATH’ (Sie können ‘info-reader’
+installieren), ‘PKG_CONFIG_PATH’ (installieren Sie ‘pkg-config’), etc.
+
+
+File: guix-cookbook.de.info,  Node: Vorgabeprofil,  Next: Der Vorteil von Manifesten,  Prev: Die nötigen Pakete,  Up: Guix-Profile in der Praxis
+
+4.1.3 Vorgabeprofil
+-------------------
+
+What about the default profile that Guix keeps in ‘~/.guix-profile’?
+
+   Sie können ihm die Rolle zuweisen, die Sie wollen. Normalerweise
+würden Sie das Manifest derjenigen Pakete installieren, die Sie ständig
+benutzen möchten.
+
+   Alternatively, you could keep it “manifest-less” for throw-away
+packages that you would just use for a couple of days. This way makes it
+convenient to run
+
+     guix install paket-foo
+     guix upgrade paket-bar
+
+   auszuführen ohne den Pfad zu einem Profil festzulegen.
+
+
+File: guix-cookbook.de.info,  Node: Der Vorteil von Manifesten,  Next: Reproduzierbare Profile,  Prev: Vorgabeprofil,  Up: Guix-Profile in der Praxis
+
+4.1.4 Der Vorteil von Manifesten
+--------------------------------
+
+Manifeste sind eine bequeme Art, Ihre Paketlisten zur Hand zu haben und
+diese z.B. über mehrere Maschinen hinweg in einem Versionskontrollsystem
+zu synchronisieren.
+
+   Eine oft gehörte Beschwerde über Manifeste ist, dass es lange dauert,
+sie zu installieren, wenn sie viele Pakete enthalten. Das ist besonders
+hinderlich, wenn Sie nur ein einziges Paket in ein großes Manifest
+installieren möchten.
+
+   Das ist ein weiteres Argument dafür, mehrere Profile zu benutzen,
+denn es stellt sich heraus, dass dieses Vorgehen perfekt für das
+Aufbrechen von Manifesten in mehrere Mengen semantisch verbundener
+Pakete geeignet ist. Mit mehreren, kleinen Profilen haben Sie mehr
+Flexibilität und Benutzerfreundlichkeit.
+
+   Manifeste haben mehrere Vorteile. Insbesondere erleichtern sie die
+Wartung.
+
+   • When a profile is set up from a manifest, the manifest itself is
+     self-sufficient to keep a “package listing” around and reinstall
+     the profile later or on a different system. For ad-hoc profiles, we
+     would need to generate a manifest specification manually and
+     maintain the package versions for the packages that don’t use the
+     default version.
+
+   • Bei ‘guix package --upgrade’ wird immer versucht, die Pakete zu
+     aktualisieren, die propagierte Eingaben haben, selbst wenn es
+     nichts zu tun gibt. Mit Guix-Manifesten fällt dieses Problem weg.
+
+   • Wenn man nur Teile eines Profils aktualisiert, kann es zu
+     Konflikten kommen (weil die Abhängigkeiten zwischen aktualisierten
+     und nicht aktualisierten Paketen voneinander abweichen), und es
+     kann mühsam sein, diese Konflikte von Hand aufzulösen. Manifeste
+     haben kein solches Problem, weil alle Pakete immer gleichzeitig
+     aktualisiert werden.
+
+   • Wie zuvor erwähnt, gewähren einem Manifeste reproduzierbare
+     Profile, während die imperativen ‘guix install’, ‘guix upgrade’,
+     etc. das nicht tun, weil sie jedes Mal ein anderes Profil ergeben,
+     obwohl sie dieselben Pakete enthalten. Siehe die dieses Thema
+     betreffende Diskussion (https://issues.guix.gnu.org/issue/33285).
+
+   • Manifestspezifikationen können von anderen ‘guix’-Befehlen benutzt
+     werden. Zum Beispiel können Sie ‘guix weather -m manifest.scm’
+     ausführen, um zu sehen, wieviele Substitute verfügbar sind, was
+     Ihnen bei der Entscheidung helfen kann, ob Sie heute schon eine
+     Aktualisierung durchführen oder lieber noch eine Weile warten
+     möchten. Ein anderes Beispiel: Sie können mit ‘guix pack -m
+     manifest.scm’ ein Bündel erzeugen, das alle Pakete im Manifest
+     enthält (mitsamt derer transitiven Referenzen).
+
+   • Zuletzt haben Manifeste auch eine Repräsentation in Scheme, nämlich
+     den ‘<manifest>’-Verbundstyp. Sie können in Scheme verarbeitet
+     werden und an die verschiedenen Guix-Programmierschnittstellen
+     (APIs) (https://de.wikipedia.org/wiki/Programmierschnittstelle)
+     übergeben werden.
+
+   It’s important to understand that while manifests can be used to
+declare profiles, they are not strictly equivalent: profiles have the
+side effect that they “pin” packages in the store, which prevents them
+from being garbage-collected (*note (guix)Invoking guix gc::) and
+ensures that they will still be available at any point in the future.
+
+   Schauen wir uns ein Beispiel an:
+
+  1. Wir haben eine Umgebung, in der wir an einem Projekt hacken können,
+     für das es noch kein Guix-Paket gibt. Wir richten die Umgebung mit
+     einem Manifest ein und führen dann ‘guix environment -m
+     manifest.scm’ aus. So weit so gut.
+
+  2. Nach vielen Wochen haben wir in der Zwischenzeit schon ein paarmal
+     ‘guix pull’ laufen lassen. Vielleicht wurde eine Abhängigkeit aus
+     unserem Manifest aktualisiert oder wir könnten ‘guix gc’ ausgeführt
+     haben, so dass manche Pakete, die von unserem Manifest gebraucht
+     würden, vom Müllsammler geholt worden sind.
+
+  3. Schließlich fangen wir wieder an, an dem Projekt zu arbeiten, also
+     fÜhren wir ‘guix environment -m manifest.scm’ aus. Aber jetzt
+     müssen wir warten, bis Guix lauter Dinge erstellt und installiert
+     hat!
+
+   Ideal wäre es, wenn wir uns die Zeit für die Neuerstellung sparen
+könnten. Und das können wir auch: Alles, was wir brauchen, ist, das
+Manifest in ein Profil zu installieren und ‘GUIX_PROFILE=/das/profil; .
+"$GUIX_PROFILE"/etc/profile’ aufzurufen, wie oben erklärt. Dadurch haben
+wir die Garantie, dass unsere Hacking-Umgebung jederzeit zur Verfügung
+steht.
+
+   _Sicherheitswarnung:_ Obwohl es angenehm sein kann, alte Profile zu
+behalten, sollten Sie daran denken, dass veraltete Pakete _nicht_ über
+die neuesten Sicherheitsbehebungen verfügen.
+
+
+File: guix-cookbook.de.info,  Node: Reproduzierbare Profile,  Prev: Der Vorteil von Manifesten,  Up: Guix-Profile in der Praxis
+
+4.1.5 Reproduzierbare Profile
+-----------------------------
+
+Um ein Profil Bit für Bit nachzubilden, brauchen wir zweierlei
+Informationen:
+
+   • ein Manifest und
+   • eine Kanalspezifikation für Guix.
+
+   Tatsächlich kann es vorkommen, dass ein Manifest allein nicht genug
+ist: Verschiedene Versionen von Guix (oder andere Kanäle) können beim
+selben Manifest zu verschiedenen Ausgaben führen.
+
+   Sie können sich die Guix-Kanalspezifikationen mit ‘guix describe
+--format=channels’ ausgeben lassen. Speichern Sie sie in eine Datei ab,
+sagen wir ‘channel-specs.scm’.
+
+   Auf einem anderen Rechner können Sie die Kanalspezifikationsdatei und
+das Manifest benutzen, um genau dasselbe Profil zu reproduzieren:
+
+     GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+     GUIX_EXTRA=$HOME/.guix-extra
+
+     mkdir "$GUIX_EXTRA"/my-project
+     guix pull --channels=channel-specs.scm --profile "$GUIX_EXTRA/my-project/guix"
+
+     mkdir -p "$GUIX_EXTRA_PROFILES/my-project"
+     "$GUIX_EXTRA"/my-project/guix/bin/guix package --manifest=/path/to/guix-my-project-manifest.scm --profile="$GUIX_EXTRA_PROFILES"/my-project/my-project
+
+   Es kann nichts Schlimmes passieren, wenn Sie das Guix-Kanalprofil,
+das Sie eben aus der Kanalspezifikation erstellt haben, löschen, denn
+das Projektprofil hängt davon nicht ab.
+
+
+File: guix-cookbook.de.info,  Node: Danksagungen,  Next: GNU-Lizenz für freie Dokumentation,  Prev: Fortgeschrittene Paketverwaltung,  Up: Top
+
+5 Danksagungen
+**************
+
+Guix baut auf dem Nix-Paketverwaltungsprogramm (https://nixos.org/nix/)
+auf, das von Eelco Dolstra entworfen und entwickelt wurde, mit Beiträgen
+von anderen Leuten (siehe die Datei ‘nix/AUTHORS’ in Guix). Nix hat für
+die funktionale Paketverwaltung die Pionierarbeit geleistet und noch nie
+dagewesene Funktionalitäten vorangetrieben wie transaktionsbasierte
+Paketaktualisierungen und die Rücksetzbarkeit selbiger, eigene
+Paketprofile für jeden Nutzer und referenziell transparente
+Erstellungsprozesse. Ohne diese Arbeit gäbe es Guix nicht.<
+
+   Die Nix-basierten Software-Distributionen Nixpkgs und NixOS waren
+auch eine Inspiration für Guix.
+
+   GNU Guix ist selbst das Produkt kollektiver Arbeit mit Beiträgen
+durch eine Vielzahl von Leuten. Siehe die Datei ‘AUTHORS’ in Guix für
+mehr Informationen, wer diese wunderbaren Menschen sind. In der Datei
+‘THANKS’ finden Sie eine Liste der Leute, die uns geholfen haben, indem
+Sie Fehler gemeldet, sich um unsere Infrastruktur gekümmert,
+künstlerische Arbeit und schön gestaltete Themen beigesteuert,
+Vorschläge gemacht und noch vieles mehr getan haben — vielen Dank!
+
+   Dieses Dokument enthält angepasste Abschnitte aus Einträgen, die
+zuvor auf dem Blog von Guix unter <https://guix.gnu.org/blog>
+veröffentlicht wurden.
+
+
+File: guix-cookbook.de.info,  Node: GNU-Lizenz für freie Dokumentation,  Next: Konzeptverzeichnis,  Prev: Danksagungen,  Up: Top
+
+Anhang A GNU-Lizenz für freie Dokumentation
+*******************************************
+
+                     Version 1.3, 3 November 2008
+
+     Copyright © 2000, 2001, 2002, 2007, 2008 Free Software Foundation, Inc.
+     <https://fsf.org/>
+
+     Everyone is permitted to copy and distribute verbatim copies
+     of this license document, but changing it is not allowed.
+
+  0. PREAMBLE
+
+     The purpose of this License is to make a manual, textbook, or other
+     functional and useful document “free” in the sense of freedom: to
+     assure everyone the effective freedom to copy and redistribute it,
+     with or without modifying it, either commercially or
+     noncommercially. Secondarily, this License preserves for the author
+     and publisher a way to get credit for their work, while not being
+     considered responsible for modifications made by others.
+
+     This License is a kind of “copyleft”, which means that derivative
+     works of the document must themselves be free in the same sense. It
+     complements the GNU General Public License, which is a copyleft
+     license designed for free software.
+
+     We have designed this License in order to use it for manuals for
+     free software, because free software needs free documentation: a
+     free program should come with manuals providing the same freedoms
+     that the software does. But this License is not limited to software
+     manuals; it can be used for any textual work, regardless of subject
+     matter or whether it is published as a printed book. We recommend
+     this License principally for works whose purpose is instruction or
+     reference.
+
+  1. APPLICABILITY AND DEFINITIONS
+
+     This License applies to any manual or other work, in any medium,
+     that contains a notice placed by the copyright holder saying it can
+     be distributed under the terms of this License. Such a notice
+     grants a world-wide, royalty-free license, unlimited in duration,
+     to use that work under the conditions stated herein. The
+     “Document”, below, refers to any such manual or work. Any member of
+     the public is a licensee, and is addressed as “you”. You accept the
+     license if you copy, modify or distribute the work in a way
+     requiring permission under copyright law.
+
+     A “Modified Version” of the Document means any work containing the
+     Document or a portion of it, either copied verbatim, or with
+     modifications and/or translated into another language.
+
+     A “Secondary Section” is a named appendix or a front-matter section
+     of the Document that deals exclusively with the relationship of the
+     publishers or authors of the Document to the Document’s overall
+     subject (or to related matters) and contains nothing that could
+     fall directly within that overall subject. (Thus, if the Document
+     is in part a textbook of mathematics, a Secondary Section may not
+     explain any mathematics.) The relationship could be a matter of
+     historical connection with the subject or with related matters, or
+     of legal, commercial, philosophical, ethical or political position
+     regarding them.
+
+     The “Invariant Sections” are certain Secondary Sections whose
+     titles are designated, as being those of Invariant Sections, in the
+     notice that says that the Document is released under this License.
+     If a section does not fit the above definition of Secondary then it
+     is not allowed to be designated as Invariant. The Document may
+     contain zero Invariant Sections. If the Document does not identify
+     any Invariant Sections then there are none.
+
+     The “Cover Texts” are certain short passages of text that are
+     listed, as Front-Cover Texts or Back-Cover Texts, in the notice
+     that says that the Document is released under this License. A
+     Front-Cover Text may be at most 5 words, and a Back-Cover Text may
+     be at most 25 words.
+
+     A “Transparent” copy of the Document means a machine-readable copy,
+     represented in a format whose specification is available to the
+     general public, that is suitable for revising the document
+     straightforwardly with generic text editors or (for images composed
+     of pixels) generic paint programs or (for drawings) some widely
+     available drawing editor, and that is suitable for input to text
+     formatters or for automatic translation to a variety of formats
+     suitable for input to text formatters. A copy made in an otherwise
+     Transparent file format whose markup, or absence of markup, has
+     been arranged to thwart or discourage subsequent modification by
+     readers is not Transparent. An image format is not Transparent if
+     used for any substantial amount of text. A copy that is not
+     “Transparent” is called “Opaque”.
+
+     Examples of suitable formats for Transparent copies include plain
+     ASCII without markup, Texinfo input format, LaTeX input format,
+     SGML or XML using a publicly available DTD, and standard-conforming
+     simple HTML, PostScript or PDF designed for human modification.
+     Examples of transparent image formats include PNG, XCF and JPG.
+     Opaque formats include proprietary formats that can be read and
+     edited only by proprietary word processors, SGML or XML for which
+     the DTD and/or processing tools are not generally available, and
+     the machine-generated HTML, PostScript or PDF produced by some word
+     processors for output purposes only.
+
+     The “Title Page” means, for a printed book, the title page itself,
+     plus such following pages as are needed to hold, legibly, the
+     material this License requires to appear in the title page. For
+     works in formats which do not have any title page as such, “Title
+     Page” means the text near the most prominent appearance of the
+     work’s title, preceding the beginning of the body of the text.
+
+     The “publisher” means any person or entity that distributes copies
+     of the Document to the public.
+
+     A section “Entitled XYZ” means a named subunit of the Document
+     whose title either is precisely XYZ or contains XYZ in parentheses
+     following text that translates XYZ in another language. (Here XYZ
+     stands for a specific section name mentioned below, such as
+     “Acknowledgements”, “Dedications”, “Endorsements”, or “History”.)
+     To “Preserve the Title” of such a section when you modify the
+     Document means that it remains a section “Entitled XYZ” according
+     to this definition.
+
+     The Document may include Warranty Disclaimers next to the notice
+     which states that this License applies to the Document. These
+     Warranty Disclaimers are considered to be included by reference in
+     this License, but only as regards disclaiming warranties: any other
+     implication that these Warranty Disclaimers may have is void and
+     has no effect on the meaning of this License.
+
+  2. VERBATIM COPYING
+
+     You may copy and distribute the Document in any medium, either
+     commercially or noncommercially, provided that this License, the
+     copyright notices, and the license notice saying this License
+     applies to the Document are reproduced in all copies, and that you
+     add no other conditions whatsoever to those of this License. You
+     may not use technical measures to obstruct or control the reading
+     or further copying of the copies you make or distribute. However,
+     you may accept compensation in exchange for copies. If you
+     distribute a large enough number of copies you must also follow the
+     conditions in section 3.
+
+     You may also lend copies, under the same conditions stated above,
+     and you may publicly display copies.
+
+  3. COPYING IN QUANTITY
+
+     If you publish printed copies (or copies in media that commonly
+     have printed covers) of the Document, numbering more than 100, and
+     the Document’s license notice requires Cover Texts, you must
+     enclose the copies in covers that carry, clearly and legibly, all
+     these Cover Texts: Front-Cover Texts on the front cover, and
+     Back-Cover Texts on the back cover. Both covers must also clearly
+     and legibly identify you as the publisher of these copies. The
+     front cover must present the full title with all words of the title
+     equally prominent and visible. You may add other material on the
+     covers in addition. Copying with changes limited to the covers, as
+     long as they preserve the title of the Document and satisfy these
+     conditions, can be treated as verbatim copying in other respects.
+
+     If the required texts for either cover are too voluminous to fit
+     legibly, you should put the first ones listed (as many as fit
+     reasonably) on the actual cover, and continue the rest onto
+     adjacent pages.
+
+     If you publish or distribute Opaque copies of the Document
+     numbering more than 100, you must either include a machine-readable
+     Transparent copy along with each Opaque copy, or state in or with
+     each Opaque copy a computer-network location from which the general
+     network-using public has access to download using public-standard
+     network protocols a complete Transparent copy of the Document, free
+     of added material. If you use the latter option, you must take
+     reasonably prudent steps, when you begin distribution of Opaque
+     copies in quantity, to ensure that this Transparent copy will
+     remain thus accessible at the stated location until at least one
+     year after the last time you distribute an Opaque copy (directly or
+     through your agents or retailers) of that edition to the public.
+
+     It is requested, but not required, that you contact the authors of
+     the Document well before redistributing any large number of copies,
+     to give them a chance to provide you with an updated version of the
+     Document.
+
+  4. MODIFICATIONS
+
+     You may copy and distribute a Modified Version of the Document
+     under the conditions of sections 2 and 3 above, provided that you
+     release the Modified Version under precisely this License, with the
+     Modified Version filling the role of the Document, thus licensing
+     distribution and modification of the Modified Version to whoever
+     possesses a copy of it. In addition, you must do these things in
+     the Modified Version:
+
+       A. Use in the Title Page (and on the covers, if any) a title
+          distinct from that of the Document, and from those of previous
+          versions (which should, if there were any, be listed in the
+          History section of the Document). You may use the same title
+          as a previous version if the original publisher of that
+          version gives permission.
+
+       B. List on the Title Page, as authors, one or more persons or
+          entities responsible for authorship of the modifications in
+          the Modified Version, together with at least five of the
+          principal authors of the Document (all of its principal
+          authors, if it has fewer than five), unless they release you
+          from this requirement.
+
+       C. State on the Title page the name of the publisher of the
+          Modified Version, as the publisher.
+
+       D. Preserve all the copyright notices of the Document.
+
+       E. Add an appropriate copyright notice for your modifications
+          adjacent to the other copyright notices.
+
+       F. Include, immediately after the copyright notices, a license
+          notice giving the public permission to use the Modified
+          Version under the terms of this License, in the form shown in
+          the Addendum below.
+
+       G. Preserve in that license notice the full lists of Invariant
+          Sections and required Cover Texts given in the Document’s
+          license notice.
+
+       H. Include an unaltered copy of this License.
+
+       I. Preserve the section Entitled “History”, Preserve its Title,
+          and add to it an item stating at least the title, year, new
+          authors, and publisher of the Modified Version as given on the
+          Title Page. If there is no section Entitled “History” in the
+          Document, create one stating the title, year, authors, and
+          publisher of the Document as given on its Title Page, then add
+          an item describing the Modified Version as stated in the
+          previous sentence.
+
+       J. Preserve the network location, if any, given in the Document
+          for public access to a Transparent copy of the Document, and
+          likewise the network locations given in the Document for
+          previous versions it was based on. These may be placed in the
+          “History” section. You may omit a network location for a work
+          that was published at least four years before the Document
+          itself, or if the original publisher of the version it refers
+          to gives permission.
+
+       K. For any section Entitled “Acknowledgements” or “Dedications”,
+          Preserve the Title of the section, and preserve in the section
+          all the substance and tone of each of the contributor
+          acknowledgements and/or dedications given therein.
+
+       L. Preserve all the Invariant Sections of the Document, unaltered
+          in their text and in their titles. Section numbers or the
+          equivalent are not considered part of the section titles.
+
+       M. Delete any section Entitled “Endorsements”. Such a section may
+          not be included in the Modified Version.
+
+       N. Do not retitle any existing section to be Entitled
+          “Endorsements” or to conflict in title with any Invariant
+          Section.
+
+       O. Preserve any Warranty Disclaimers.
+
+     If the Modified Version includes new front-matter sections or
+     appendices that qualify as Secondary Sections and contain no
+     material copied from the Document, you may at your option designate
+     some or all of these sections as invariant. To do this, add their
+     titles to the list of Invariant Sections in the Modified Version’s
+     license notice. These titles must be distinct from any other
+     section titles.
+
+     You may add a section Entitled “Endorsements”, provided it contains
+     nothing but endorsements of your Modified Version by various
+     parties—for example, statements of peer review or that the text has
+     been approved by an organization as the authoritative definition of
+     a standard.
+
+     You may add a passage of up to five words as a Front-Cover Text,
+     and a passage of up to 25 words as a Back-Cover Text, to the end of
+     the list of Cover Texts in the Modified Version. Only one passage
+     of Front-Cover Text and one of Back-Cover Text may be added by (or
+     through arrangements made by) any one entity. If the Document
+     already includes a cover text for the same cover, previously added
+     by you or by arrangement made by the same entity you are acting on
+     behalf of, you may not add another; but you may replace the old
+     one, on explicit permission from the previous publisher that added
+     the old one.
+
+     The author(s) and publisher(s) of the Document do not by this
+     License give permission to use their names for publicity for or to
+     assert or imply endorsement of any Modified Version.
+
+  5. COMBINING DOCUMENTS
+
+     You may combine the Document with other documents released under
+     this License, under the terms defined in section 4 above for
+     modified versions, provided that you include in the combination all
+     of the Invariant Sections of all of the original documents,
+     unmodified, and list them all as Invariant Sections of your
+     combined work in its license notice, and that you preserve all
+     their Warranty Disclaimers.
+
+     The combined work need only contain one copy of this License, and
+     multiple identical Invariant Sections may be replaced with a single
+     copy. If there are multiple Invariant Sections with the same name
+     but different contents, make the title of each such section unique
+     by adding at the end of it, in parentheses, the name of the
+     original author or publisher of that section if known, or else a
+     unique number. Make the same adjustment to the section titles in
+     the list of Invariant Sections in the license notice of the
+     combined work.
+
+     In the combination, you must combine any sections Entitled
+     “History” in the various original documents, forming one section
+     Entitled “History”; likewise combine any sections Entitled
+     “Acknowledgements”, and any sections Entitled “Dedications”. You
+     must delete all sections Entitled “Endorsements.”
+
+  6. COLLECTIONS OF DOCUMENTS
+
+     You may make a collection consisting of the Document and other
+     documents released under this License, and replace the individual
+     copies of this License in the various documents with a single copy
+     that is included in the collection, provided that you follow the
+     rules of this License for verbatim copying of each of the documents
+     in all other respects.
+
+     You may extract a single document from such a collection, and
+     distribute it individually under this License, provided you insert
+     a copy of this License into the extracted document, and follow this
+     License in all other respects regarding verbatim copying of that
+     document.
+
+  7. AGGREGATION WITH INDEPENDENT WORKS
+
+     A compilation of the Document or its derivatives with other
+     separate and independent documents or works, in or on a volume of a
+     storage or distribution medium, is called an “aggregate” if the
+     copyright resulting from the compilation is not used to limit the
+     legal rights of the compilation’s users beyond what the individual
+     works permit. When the Document is included in an aggregate, this
+     License does not apply to the other works in the aggregate which
+     are not themselves derivative works of the Document.
+
+     If the Cover Text requirement of section 3 is applicable to these
+     copies of the Document, then if the Document is less than one half
+     of the entire aggregate, the Document’s Cover Texts may be placed
+     on covers that bracket the Document within the aggregate, or the
+     electronic equivalent of covers if the Document is in electronic
+     form. Otherwise they must appear on printed covers that bracket the
+     whole aggregate.
+
+  8. TRANSLATION
+
+     Translation is considered a kind of modification, so you may
+     distribute translations of the Document under the terms of section
+     4. Replacing Invariant Sections with translations requires special
+     permission from their copyright holders, but you may include
+     translations of some or all Invariant Sections in addition to the
+     original versions of these Invariant Sections. You may include a
+     translation of this License, and all the license notices in the
+     Document, and any Warranty Disclaimers, provided that you also
+     include the original English version of this License and the
+     original versions of those notices and disclaimers. In case of a
+     disagreement between the translation and the original version of
+     this License or a notice or disclaimer, the original version will
+     prevail.
+
+     If a section in the Document is Entitled “Acknowledgements”,
+     “Dedications”, or “History”, the requirement (section 4) to
+     Preserve its Title (section 1) will typically require changing the
+     actual title.
+
+  9. TERMINATION
+
+     You may not copy, modify, sublicense, or distribute the Document
+     except as expressly provided under this License. Any attempt
+     otherwise to copy, modify, sublicense, or distribute it is void,
+     and will automatically terminate your rights under this License.
+
+     However, if you cease all violation of this License, then your
+     license from a particular copyright holder is reinstated (a)
+     provisionally, unless and until the copyright holder explicitly and
+     finally terminates your license, and (b) permanently, if the
+     copyright holder fails to notify you of the violation by some
+     reasonable means prior to 60 days after the cessation.
+
+     Moreover, your license from a particular copyright holder is
+     reinstated permanently if the copyright holder notifies you of the
+     violation by some reasonable means, this is the first time you have
+     received notice of violation of this License (for any work) from
+     that copyright holder, and you cure the violation prior to 30 days
+     after your receipt of the notice.
+
+     Termination of your rights under this section does not terminate
+     the licenses of parties who have received copies or rights from you
+     under this License. If your rights have been terminated and not
+     permanently reinstated, receipt of a copy of some or all of the
+     same material does not give you any rights to use it.
+
+  10. FUTURE REVISIONS OF THIS LICENSE
+
+     The Free Software Foundation may publish new, revised versions of
+     the GNU Free Documentation License from time to time. Such new
+     versions will be similar in spirit to the present version, but may
+     differ in detail to address new problems or concerns. See
+     <https://www.gnu.org/copyleft/>.
+
+     Each version of the License is given a distinguishing version
+     number. If the Document specifies that a particular numbered
+     version of this License “or any later version” applies to it, you
+     have the option of following the terms and conditions either of
+     that specified version or of any later version that has been
+     published (not as a draft) by the Free Software Foundation. If the
+     Document does not specify a version number of this License, you may
+     choose any version ever published (not as a draft) by the Free
+     Software Foundation. If the Document specifies that a proxy can
+     decide which future versions of this License can be used, that
+     proxy’s public statement of acceptance of a version permanently
+     authorizes you to choose that version for the Document.
+
+  11. RELICENSING
+
+     “Massive Multiauthor Collaboration Site” (or “MMC Site”) means any
+     World Wide Web server that publishes copyrightable works and also
+     provides prominent facilities for anybody to edit those works. A
+     public wiki that anybody can edit is an example of such a server. A
+     “Massive Multiauthor Collaboration” (or “MMC”) contained in the
+     site means any set of copyrightable works thus published on the MMC
+     site.
+
+     “CC-BY-SA” means the Creative Commons Attribution-Share Alike 3.0
+     license published by Creative Commons Corporation, a not-for-profit
+     corporation with a principal place of business in San Francisco,
+     California, as well as future copyleft versions of that license
+     published by that same organization.
+
+     “Incorporate” means to publish or republish a Document, in whole or
+     in part, as part of another Document.
+
+     An MMC is “eligible for relicensing” if it is licensed under this
+     License, and if all works that were first published under this
+     License somewhere other than this MMC, and subsequently
+     incorporated in whole or in part into the MMC, (1) had no cover
+     texts or invariant sections, and (2) were thus incorporated prior
+     to November 1, 2008.
+
+     The operator of an MMC Site may republish an MMC contained in the
+     site under CC-BY-SA on the same site at any time before August 1,
+     2009, provided the MMC is eligible for relicensing.
+
+ADDENDUM: How to use this License for your documents
+====================================================
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and license
+notices just after the title page:
+
+       Copyright (C)  YEAR  YOUR NAME.
+       Permission is granted to copy, distribute and/or modify this document
+       under the terms of the GNU Free Documentation License, Version 1.3
+       or any later version published by the Free Software Foundation;
+       with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+       Texts.  A copy of the license is included in the section entitled ``GNU
+       Free Documentation License''.
+
+   If you have Invariant Sections, Front-Cover Texts and Back-Cover
+Texts, replace the “with...Texts.” line with this:
+
+         with the Invariant Sections being LIST THEIR TITLES, with
+         the Front-Cover Texts being LIST, and with the Back-Cover Texts
+         being LIST.
+
+   If you have Invariant Sections without Cover Texts, or some other
+combination of the three, merge those two alternatives to suit the
+situation.
+
+   If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of free
+software license, such as the GNU General Public License, to permit
+their use in free software.
+
+
+File: guix-cookbook.de.info,  Node: Konzeptverzeichnis,  Prev: GNU-Lizenz für freie Dokumentation,  Up: Top
+
+Konzeptverzeichnis
+******************
+
+ [index ]
+* Menu:
+
+* Lizenz, GNU-Lizenz für freie Dokumentation: GNU-Lizenz für freie Dokumentation.
+                                                               (line  6)
+* Pakete schreiben:                      Paketerstellung.      (line  6)
+* Scheme, Schnellkurs:                   Ein Schnellkurs in Scheme.
+                                                               (line  6)
+* sessionlock:                           Session lock.         (line  6)
+* stumpwm:                               StumpWM.              (line  6)
+* stumpwm fonts:                         StumpWM.              (line 20)
+* wm:                                    Customizing a Window Manager.
+                                                               (line  5)
+
+
+
+Tag Table:
+Node: Top993
+Node: Anleitungen zu Scheme2351
+Node: Ein Schnellkurs in Scheme3089
+Node: Paketerstellung9978
+Node: Anleitung zum Paketeschreiben10506
+Node: Ein Hallo-Welt-Paket12924
+Node: Herangehensweisen22124
+Node: Lokale Datei22912
+Node: GUIX_PACKAGE_PATH23766
+Node: Guix-Kanäle26806
+Node: Direkt am Checkout hacken27430
+Node: Erweitertes Beispiel30556
+Node: Andere Erstellungssysteme47748
+Node: Programmierbare und automatisierte Paketdefinition48813
+Node: Rekursive Importer49441
+Node: Automatisch aktualisieren52034
+Node: Vererbung52698
+Node: Hilfe bekommen53885
+Node: Schlusswort54796
+Node: Literaturverzeichnis56196
+Node: Systemkonfiguration56737
+Node: Den Kernel anpassen57630
+Node: Customizing a Window Manager68953
+Node: StumpWM69213
+Node: Session lock70636
+Node: Xorg71109
+Node: Setting up a bind mount72367
+Node: Fortgeschrittene Paketverwaltung74439
+Node: Guix-Profile in der Praxis75142
+Node: Grundlegende Einrichtung über Manifeste78541
+Node: Die nötigen Pakete83221
+Node: Vorgabeprofil84322
+Node: Der Vorteil von Manifesten85029
+Node: Reproduzierbare Profile90026
+Node: Danksagungen91479
+Node: GNU-Lizenz für freie Dokumentation92957
+Node: Konzeptverzeichnis118289
+
+End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:

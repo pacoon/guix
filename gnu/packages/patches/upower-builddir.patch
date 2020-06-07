@@ -1,0 +1,22 @@
+Remove explicit set of UPOWER_CONF_FILE_NAME in up-self-test.c;
+instead the harness should set it.  In Guix we set it explicitly; the
+right thing is to use AM_TEST_ENVIRONMENT and regenerate the
+makefiles, but we can't regenerate because current autotools carp on
+some things, so we patch the Makefile.in instead.
+
+Also fix to not try to create /var/lib/upower if /var isn't writable.
+
+Patch by Andy Wingo <wingo@igalia.com>
+Reduced to upower 0.99.10 by Tobias Geerinckx-Rice <me@tobias.gr>
+
+--- upower-0.99.2.orig/src/Makefile.in	2014-12-18 10:32:01.000000000 +0100
++++ upower-0.99.2/src/Makefile.in	2015-04-04 19:49:28.020843678 +0200
+@@ -1789,7 +1790,7 @@
+ @HAVE_SYSTEMDSYSTEMUNITDIR_TRUE@	@sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@
+ 
+ install-data-hook:
+-	if test -w $(DESTDIR)$(prefix)/; then \
++	if test -w $(DESTDIR)$(localstatedir)/; then \
+ 		mkdir -p $(DESTDIR)$(historydir); \
+ 	fi
+ 

@@ -1,0 +1,28 @@
+We want to allow builds in chroots that lack /bin/sh.  Thus, system(3)
+and popen(3) need to be tweaked to use the right shell.  For the bootstrap
+glibc, we just use whatever `sh' can be found in $PATH.  The final glibc
+instead uses the hard-coded absolute file name of `bash'.
+
+--- a/sysdeps/posix/system.c
++++ b/sysdeps/posix/system.c
+@@ -140,7 +140,7 @@ do_system (const char *line)
+   __posix_spawnattr_setflags (&spawn_attr,
+ 			      POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK);
+ 
+-  status = __posix_spawn (&pid, SHELL_PATH, 0, &spawn_attr,
++  status = posix_spawnp (&pid, SHELL_NAME, 0, &spawn_attr,
+ 			  (char *const[]){ (char*) SHELL_NAME,
+ 					   (char*) "-c",
+ 					   (char *) line, NULL },
+--- a/libio/iopopen.c
++++ b/libio/iopopen.c
+@@ -85,7 +85,7 @@ spawn_process (posix_spawn_file_actions_t *fa, FILE *fp, const char *command,
+ 	return false;
+     }
+ 
+-  if (__posix_spawn (&((_IO_proc_file *) fp)->pid, _PATH_BSHELL, fa, 0,
++  if (posix_spawnp (&((_IO_proc_file *) fp)->pid, "sh", fa, 0,
+ 		     (char *const[]){ (char*) "sh", (char*) "-c",
+ 		     (char *) command, NULL }, __environ) != 0)
+     return false;
+

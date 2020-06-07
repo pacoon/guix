@@ -1,0 +1,157 @@
+;; -*-scheme-*-
+
+;; This is an operating system configuration template for a "bare bones
+;; development" setup, with no X11 display server.
+
+;; GUIX_PROFILE=/run/current-system/bootstrap-profile
+;; . $GUIX_PROFILE/etc/profile
+;;
+;; guix build hello
+
+(use-modules (srfi srfi-1)
+             (ice-9 match)
+             (gnu)
+             (gnu system hurd)
+             (guix gexp)
+             (guix monads)
+             (guix packages)
+             (guix profiles)
+             (guix store)
+             (guix utils))
+(use-service-modules ssh)
+(use-package-modules base bootstrap commencement compression file gawk less m4
+                     package-management ssh version-control)
+
+(define %default-bootstrap-profile-packages
+  (list %bootstrap-gcc %bootstrap-binutils %bootstrap-glibc))
+
+;; XXX works, but clumsy
+(define* (bootstrap-packages->profile-entry
+          #:optional (bootstrap-packages %default-bootstrap-profile-packages))
+  "Return a system entry for the profile containing BOOTSTRAP-PACKAGES."
+
+  (define (cross-bootstrap thing)
+    (let ((target (match (%current-target-system)
+                    ("i586-pc-gnu" "i586-gnu"))))
+      (with-parameters ((%current-system target))
+        thing)))
+
+  (define (cross-bootstrap-entry entry)
+    (manifest-entry
+      (inherit entry)
+      (item (cross-bootstrap (manifest-entry-item entry)))))
+
+  (with-monad %store-monad
+    (return `(("bootstrap-profile" ,(profile
+                                     (content
+                                      (map-manifest-entries
+                                       cross-bootstrap-entry
+                                       (packages->manifest
+                                        bootstrap-packages)))))))))
+
+(define bootstrap-profile-service-type
+  (service-type (name 'profile)
+                (extensions
+                 (list (service-extension system-service-type
+                                          bootstrap-packages->profile-entry)))
+                (compose concatenate)
+                (extend append)
+                (description
+                 "This adds %bootstrap packages to the @dfn{system profile},
+available as @file{/run/current-system/profile}.")))
+
+;; XXX works only when put into guix/services.scm
+;; (define* (packages->profile-entry packages
+;;                                   #:optional
+;;                                   (bootstrap-packages
+;;                                    %default-bootstrap-profile-packages))
+;;   "Return a system entry for the profile containing PACKAGES."
+
+;;   (define (cross-bootstrap thing)
+;;     (let ((target (match (%current-target-system)
+;;                     ("i586-pc-gnu" "i586-gnu"))))
+;;       (with-parameters ((%current-system target))
+;;         thing)))
+
+;;   (define (cross-bootstrap-entry entry)
+;;     (manifest-entry
+;;       (inherit entry)
+;;       (item (cross-bootstrap (manifest-entry-item entry)))))
+
+;;   (with-monad %store-monad
+;;     (return `(("profile" ,(profile
+;;                            (content
+;;                             (concatenate-manifests
+;;                              (list
+;;                               (packages->manifest
+;;                                (delete-duplicates packages eq?))
+;;                               (map-manifest-entries
+;;                                cross-bootstrap-entry
+;;                                (packages->manifest bootstrap-packages)))))))))))
+
+;; (define profile-service-type
+;;   ;; The service that populates the system's profile---i.e.,
+;;   ;; /run/current-system/profile.  It is extended by package lists.
+;;   (service-type (name 'profile)
+;;                 (extensions
+;;                  (list (service-extension system-service-type
+;;                                           packages->profile-entry)))
+;;                 (compose concatenate)
+;;                 (extend append)
+;;                 (description
+;;                  "This is the @dfn{system profile}, available as
+;; @file{/run/current-system/profile}.  It contains packages that the sysadmin
+;; wants to be globally available to all the system users.")))
+
+;; (module-define! (resolve-module '(guix services)) 'packages->profile-entry packages->profile-entry)
+;; (module-define! (resolve-module '(guix services)) 'profile-service-type profile-service-type)
+
+(define (input->packages input)
+  "Return the list of packages in INPUT."
+  (match input
+    ((label (and (? package?) package) . output)
+     (list package))
+    (_ '())))
+
+(define %hurd-os
+  (operating-system
+    (inherit %hurd-default-operating-system)
+    (bootloader (bootloader-configuration
+                 (bootloader grub-minimal-bootloader)
+                 (target "/dev/sdX")))
+    (file-systems (cons (file-system
+                          (device (file-system-label "my-root"))
+                          (mount-point "/")
+                          (type "ext2"))
+                        %base-file-systems))
+    (host-name "guixygnu")
+    (timezone "Europe/Berlin")
+    (users (cons (user-account
+                  (name "guix")
+                  (group "users")
+                  (supplementary-groups '("wheel")))
+                 %base-user-accounts))
+    (packages (cons*
+               diffutils
+               gawk
+               git-minimal
+               gzip gnu-make m4 openssh tar xz
+               (append
+                (append-map input->packages
+                            (fold alist-delete (package-direct-inputs guix)
+                                  '("graphviz"
+                                    "gnutls" ;; FIXME profile contains conflicting entries for gnutls
+                                    "po4a")))
+                %base-packages/hurd)))
+    (services (cons*
+               (service bootstrap-profile-service-type %default-bootstrap-profile-packages)
+               (service openssh-service-type
+                        (openssh-configuration
+                         (use-pam? #f)
+                         (port-number 2222)
+                         (permit-root-login #t)
+                         (allow-empty-passwords? #t)
+                         (password-authentication? #t)))
+               %base-services/hurd))))
+
+%hurd-os

@@ -1,0 +1,1019 @@
+@node 贡献
+@chapter 贡献
+
+这个项目是大家合作的成果，我们需要你的帮助以更好地发展。请通过@email{guix-devel@@gnu.org} 和 Freenode IRC 上的
+@code{#guix}
+联系我们。我们欢迎您的想法、bug反馈、补丁，以及任何可能对项目有帮助的贡献。我们特别欢迎帮助我们打包（@pxref{打包指导}）。
+
+@cindex 行为准则和贡献者
+@cindex 贡献者契约
+We want to provide a warm, friendly, and harassment-free environment, so
+that anyone can contribute to the best of their abilities.  To this end our
+project uses a ``Contributor Covenant'', which was adapted from
+@url{https://contributor-covenant.org/}.  You can find a local version in
+the @file{CODE-OF-CONDUCT} file in the source tree.
+
+贡献者在提交补丁和网上交流时不需要使用法律认可的名字。他们可以使用任何名字或者假名。
+
+@menu
+* 从Git构建::             最新的并且最好的。
+* 在安装之前运行Guix::  黑客技巧。
+* 完美的配置::          正确的工具。
+* 打包指导::             帮助发行版成长。
+* 代码风格::             开发者的卫生情况
+* 提交补丁::             分享你的工作。
+* Tracking Bugs and Patches::  Using Debbugs.
+* Commit Access::            Pushing to the official repository.
+@end menu
+
+@node 从Git构建
+@section 从Git构建
+
+如果你想折腾Guix本身，建议使用Git仓库里最新的版本：
+
+@example
+git clone https://git.savannah.gnu.org/git/guix.git
+@end example
+
+@cindex authentication, of a Guix checkout
+How do you ensure that you obtained a genuine copy of the repository? Guix
+itself provides a tool to @dfn{authenticate} your checkout, but you must
+first make sure this tool is genuine in order to ``bootstrap'' the trust
+chain.  To do that, run:
+
+@c ===========================================================================
+@c
+@c This file was generated with po4a. Translate the source file.
+@c
+@c ===========================================================================
+@c XXX: Adjust instructions when there's a known tag to start from.
+@example
+git verify-commit `git log --format=%H build-aux/git-authenticate.scm`
+@end example
+
+The output must look something like:
+
+@example
+gpg: Signature made Fri 27 Dec 2019 01:27:41 PM CET
+gpg:                using RSA key 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
+@dots{}
+gpg: Signature made Fri 27 Dec 2019 01:25:22 PM CET
+gpg:                using RSA key 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
+@dots{}
+@end example
+
+@noindent
+... meaning that changes to this file are all signed with key
+@code{3CE464558A84FDC69DB40CFB090B11993D9AEBB5} (you may need to fetch this
+key from a key server, if you have not done it yet).
+
+From there on, you can authenticate all the commits included in your
+checkout by running:
+
+@example
+make authenticate
+@end example
+
+The first run takes a couple of minutes, but subsequent runs are faster.
+
+@quotation 注
+You are advised to run @command{make authenticate} after every @command{git
+pull} invocation.  This ensures you keep receiving valid changes to the
+repository
+@end quotation
+
+设置Guix开发环境的最简单的方式当然是使用Guix！下面这些命令启动一个shell，所有的依赖和环境变量都为折腾Guix设置好了：
+
+@example
+guix environment guix --pure
+@end example
+
+@xref{调用guix environment}, for more information on that command.
+
+If you are unable to use Guix when building Guix from a checkout, the
+following are the required packages in addition to those mentioned in the
+installation instructions (@pxref{需求}).
+
+@itemize
+@item @url{https://gnu.org/software/autoconf/, GNU Autoconf};
+@item @url{https://gnu.org/software/automake/, GNU Automake};
+@item @url{https://gnu.org/software/gettext/, GNU Gettext};
+@item @url{https://gnu.org/software/texinfo/, GNU Texinfo};
+@item @url{https://www.graphviz.org/, Graphviz};
+@item @url{https://www.gnu.org/software/help2man/, GNU Help2man (optional)}.
+@end itemize
+
+On Guix, extra dependencies can be added by instead running @command{guix
+environment} with @option{--ad-hoc}:
+
+@example
+guix environment guix --pure --ad-hoc help2man git strace
+@end example
+
+运行 @command{./bootstrap} 以使用Autoconf和Automake生成构建系统的基础框架。如果你的得到这样的错误：
+
+@example
+configure.ac:46: error: possibly undefined macro: PKG_CHECK_MODULES
+@end example
+
+@noindent
+它可能意味着Autoconf无法找到由pkg-config提供的@file{pkg.m4}。请确保@file{pkg.m4}可用。由Guile提供的@file{guile.m4}宏也类似。假如你的Automake安装在@file{/usr/local}，那么它不会从@file{/usr/share}里寻找@file{.m4}文件。这种情况下，你必须执行下面这个命令：
+
+@example
+export ACLOCAL_PATH=/usr/share/aclocal
+@end example
+
+参考@xref{Macro Search Path,,, automake, The GNU Automake Manual}.
+
+Then, run @command{./configure} as usual.  Make sure to pass
+@code{--localstatedir=@var{directory}} where @var{directory} is the
+@code{localstatedir} value used by your current installation (@pxref{仓库}, for information about this).  We recommend to use the value
+@code{/var}.
+
+最后，用@code{make check}执行测试（@pxref{运行测试套件}）。如果遇到任何错误，请参考“安装指导”（@pxref{安装}）或者给@email{guix-devel@@gnu.org,
+邮件列表}发邮件。
+
+
+@node 在安装之前运行Guix
+@section 在安装之前运行Guix
+
+为了保持一个合适的工作环境，你会发现在你的本地代码树里测试修改而不用安装它们会很有用。TODO: So that you can distinguish
+between your ``end-user'' hat and your ``motley'' costume.
+
+To that end, all the command-line tools can be used even if you have not run
+@code{make install}.  To do that, you first need to have an environment with
+all the dependencies available (@pxref{从Git构建}), and then simply
+prefix each command with @command{./pre-inst-env} (the @file{pre-inst-env}
+script lives in the top build tree of Guix; it is generated by
+@command{./configure}).  An example@footnote{The @option{-E} flag to
+@command{sudo} guarantees that @code{GUILE_LOAD_PATH} is correctly set such
+that @command{guix-daemon} and the tools it uses can find the Guile modules
+they need.}:
+
+@example
+$ sudo -E ./pre-inst-env guix-daemon --build-users-group=guixbuild
+$ ./pre-inst-env guix build hello
+@end example
+
+@noindent
+Similarly, an example for a Guile session using the Guix modules:
+
+@example
+$ ./pre-inst-env guile -c '(use-modules (guix utils)) (pk (%current-system))'
+
+;;; ("x86_64-linux")
+@end example
+
+@noindent
+@cindex REPL
+@cindex read-eval-print loop
+@dots{} and for a REPL (@pxref{Using Guile Interactively,,, guile, Guile
+Reference Manual}):
+
+@example
+$ ./pre-inst-env guile
+scheme@@(guile-user)> ,use(guix)
+scheme@@(guile-user)> ,use(gnu)
+scheme@@(guile-user)> (define snakes
+                       (fold-packages
+                         (lambda (package lst)
+                           (if (string-prefix? "python"
+                                               (package-name package))
+                               (cons package lst)
+                               lst))
+                         '()))
+scheme@@(guile-user)> (length snakes)
+$1 = 361
+@end example
+
+@command{pre-inst-env}脚本设置为此好了所有必要的的环境变量，包括@env{PATH}和@env{GUILE_LOAD_PATH}。
+
+@command{./pre-inst-env guix pull} @emph{不}
+会更新本地源代码树，它只更新符号链接@file{~/.config/guix/current} (@pxref{调用guix pull})。如果你想更新本地源代码树，请运行@command{git pull}。
+
+
+@node 完美的配置
+@section 完美的配置
+
+The Perfect Setup to hack on Guix is basically the perfect setup used for
+Guile hacking (@pxref{Using Guile in Emacs,,, guile, Guile Reference
+Manual}).  First, you need more than an editor, you need
+@url{https://www.gnu.org/software/emacs, Emacs}, empowered by the wonderful
+@url{https://nongnu.org/geiser/, Geiser}.  To set that up, run:
+
+@example
+guix package -i emacs guile emacs-geiser
+@end example
+
+Geiser允许在Emacs里进行交互式的、增长式的开发：buffer里的代码补全和执行，获取一行的文档（docstrings），上下文敏感的补全，@kbd{M-.}跳转到对象定义，测试代码的REPL，及更多（@pxref{介绍,,,
+geiser, Geiser User Manual}）。为了方便的Guix开发，请确保修改Guile的加载路径（load
+path）以使其能从你的项目里找到源代码文件。
+
+@lisp
+;; @r{假设Guix项目在 ~/src/guix.}
+(with-eval-after-load 'geiser-guile
+  (add-to-list 'geiser-guile-load-path "~/src/guix"))
+@end lisp
+
+To actually edit the code, Emacs already has a neat Scheme mode.  But in
+addition to that, you must not miss
+@url{https://www.emacswiki.org/emacs/ParEdit, Paredit}.  It provides
+facilities to directly operate on the syntax tree, such as raising an
+s-expression or wrapping it, swallowing or rejecting the following
+s-expression, etc.
+
+@cindex 代码片段
+@cindex 模板
+@cindex 减少样板
+We also provide templates for common git commit messages and package
+definitions in the @file{etc/snippets} directory.  These templates can be
+used with @url{https://joaotavora.github.io/yasnippet/, YASnippet} to expand
+short trigger strings to interactive text snippets.  You may want to add the
+snippets directory to the @var{yas-snippet-dirs} variable in Emacs.
+
+@lisp
+;; @r{假设Guix项目在 ~/src/guix.}
+(with-eval-after-load 'yasnippet
+  (add-to-list 'yas-snippet-dirs "~/src/guix/etc/snippets"))
+@end lisp
+
+commit信息片段显示staged文件需要依赖@url{https://magit.vc/,
+Magit}。编辑commit信息时，输入@code{add}，然后按@kbd{TAB}就可以插入一段用于新增软件包的模板；输入@code{update}，然后按@kbd{TAB}可以插入一段更新软件包的模板；输入@code{https}然后按@kbd{TAB}可以插入一段修改主页URI为HTTPS的模板。
+
+@code{scheme-mode}最重要的模板可以通过输入@code{package...}，然后按@kbd{TAB}触发。这个片段还插入了触发字符串@code{origin...}，以进一步展开。@code{origin}片段更进一步的可能插入其它以@code{...}结尾的触发字符串，它们可以被继续展开。
+
+@cindex insert or update copyright
+@cindex @code{M-x guix-copyright}
+@cindex @code{M-x copyright-update}
+Additionaly we provide insertion and automatic update of a copyright in
+@file{etc/copyright.el}.  You may want to set your full name, mail, and load
+a file.
+
+@lisp
+(setq user-full-name "Alice Doe")
+(setq user-mail-address "alice@@mail.org")
+;; @r{Assuming the Guix checkout is in ~/src/guix.}
+(load-file "~/src/guix/etc/copyright.el")
+@end lisp
+
+To insert a copyright at the current line invoke @code{M-x guix-copyright}.
+
+To update a copyright you need to specify a @code{copyright-names-regexp}.
+
+@lisp
+(setq copyright-names-regexp
+      (format "%s <%s>" user-full-name user-mail-address))
+@end lisp
+
+You can check if your copyright is up to date by evaluating @code{M-x
+copyright-update}.  If you want to do it automatically after each buffer
+save then add @code{(add-hook 'after-save-hook 'copyright-update)} in Emacs.
+
+@node 打包指导
+@section 打包指导
+
+@cindex 软件包, 创建
+这个GNU发行版正在开发的早期阶段，可能缺少一些你喜欢的软件。这个章节介绍你可以怎样帮助这个发行版成长。
+
+自由软件通常以@dfn{源代码包}的形式分发，通常是包含完整代码的@file{tar.gz}包。添加软件包到这个发行版意味着两件事：添加描述如何构建包的@dfn{配方}和一系列依赖软件，以及添加配方之外的@dfn{软件包元数据}，如一段文字描述和证书信息。
+
+在Guix里所有这些信息都包含在@dfn{软件包定义}里。软件包定义提供了软件包的高层视角。它们使用Scheme编程语言编写，事实上，对每个软件包我们都定义一个绑定到软件包定义的的变量，并且从模块（@pxref{软件包模块}）中导出那个变量。然而，深入的Scheme知识@emph{不}是创建软件包的前提条件。若要了解软件包的更多信息，@pxref{定义软件包}。
+
+一旦软件包定义准备好了，并且包存在Guix代码树的一个文件里，你可以用@command{guix build} (@pxref{调用guix build})命令测试它。假设这个新软件包的名字叫做@code{gnew}，你可以在Guix构建树里运行这个命令(@pxref{在安装之前运行Guix})：
+
+@example
+./pre-inst-env guix build gnew --keep-failed
+@end example
+
+使用@code{--keep-failed}参数会保留失败的构建树，这可以使调试构建错误更容易。@code{--log-file}也是一个调试时很有用的参数，它可以用来访问构建日志。
+
+如果@command{guix}命令找不到这个软件包，那可能是因为源文件包含语法错误，或者缺少导出软件包的@code{define-public}语句。为了查找错误，你可以用Guile导入这个模块以了解这个错误的详情：
+
+@example
+./pre-inst-env guile -c '(use-modules (gnu packages gnew))'
+@end example
+
+Once your package builds correctly, please send us a patch
+(@pxref{提交补丁}).  Well, if you need help, we will be happy to
+help you too.  Once the patch is committed in the Guix repository, the new
+package automatically gets built on the supported platforms by
+@url{@value{SUBSTITUTE-SERVER}, our continuous integration system}.
+
+@cindex substituter
+用户可以通过运行@command{guix pull}命令获取最新的软件包定义（@pxref{调用guix pull}）。当@code{@value{SUBSTITUTE-SERVER}}构建好这些软件包之后，安装这些软件包时会自动从服务器（@pxref{Substitutes}）上下载构建好的二进制包。唯一需要人工干预的地方是评审和应用代码补丁。
+
+
+@menu
+* 软件自由::             什么可以进入这个发行版。
+* 软件包命名::          名字里包含什么？
+* 版本号::                当名字不够时
+* 简介和描述::          帮助用户寻找合适的软件包
+* Python模块::             接触英式的喜剧
+* Perl模块::               小珍珠。
+* Java包::                  喝咖啡休息。
+* Rust Crates::              Beware of oxidation.
+* 字体::                   字体的乐趣。
+@end menu
+
+@node 软件自由
+@subsection 软件自由
+
+@c Adapted from http://www.gnu.org/philosophy/philosophy.html.
+@cindex 自由软件
+The GNU operating system has been developed so that users can have freedom
+in their computing.  GNU is @dfn{free software}, meaning that users have the
+@url{https://www.gnu.org/philosophy/free-sw.html,four essential freedoms}:
+to run the program, to study and change the program in source code form, to
+redistribute exact copies, and to distribute modified versions.  Packages
+found in the GNU distribution provide only software that conveys these four
+freedoms.
+
+In addition, the GNU distribution follow the
+@url{https://www.gnu.org/distros/free-system-distribution-guidelines.html,free
+software distribution guidelines}.  Among other things, these guidelines
+reject non-free firmware, recommendations of non-free software, and discuss
+ways to deal with trademarks and patents.
+
+某些上游的软件包源代码包含一小部分违反上述准则的可选的子集，比如这个子集本身就是非自由代码。这时，这些讨厌的代码需要用合适的补丁或者软件包定义（@pxref{定义软件包}）里的@code{origin}里的代码片段移除。这样，@code{guix build
+--source}就可以返回自由的源代码而不是未经修改的上游源代码。
+
+
+@node 软件包命名
+@subsection 软件包命名
+
+@cindex 软件包名字
+一个软件包事实上有两个名字：第一个是@emph{Scheme变量}的名字，即用@code{define-public}定义的名字。通过这个名字，软件包可以被Scheme代码找到，如用作其它软件包的输入。第二个名字是软件包定义里的@code{name}属性的字符串值。这个名字用于软件包管理命令，如：@command{guix
+package}，@command{guix build}
+
+两个名字通常是相同的，常是上游项目名字转成小写字母并把下划线替换成连字符的结果。比如，GNUnet转成@code{gnunet}，SDL_net转成@code{sdl-net}。
+
+我们不给库软件包添加@code{lib}前缀，除非它是项目官方名字的一部分。但是@pxref{Python模块}和@ref{Perl模块}有关于Python和Perl语言的特殊规则。
+
+字体软件包的名字处理起来不同，@pxref{字体}.
+
+
+@node 版本号
+@subsection 版本号
+
+@cindex 软件包版本
+我们通常只为每个自由软件的最新版本打包。但是有时候，比如对于版本不兼容的库，需要有同一个软件包的两个或更多版本。它们需要使用不同的Scheme变量名。我们为最新的版本使用@ref{软件包命名}里规定的名字，旧的版本使用加上后缀的名字，后缀是@code{-}和可以区分开版本号的版本号的最小前缀。
+
+软件包定义里的名字对于同一个软件包的所有版本都是相同的，并且不含有版本号。
+
+例如，GTK+的2.24.20和3.9.12两个版本可以这样打包：
+
+@lisp
+(define-public gtk+
+  (package
+    (name "gtk+")
+    (version "3.9.12")
+    ...))
+(define-public gtk+-2
+  (package
+    (name "gtk+")
+    (version "2.24.20")
+    ...))
+@end lisp
+如果我们还需要GTK+ 3.8.2，就这样打包
+@lisp
+(define-public gtk+-3.8
+  (package
+    (name "gtk+")
+    (version "3.8.2")
+    ...))
+@end lisp
+
+@c See <https://lists.gnu.org/archive/html/guix-devel/2016-01/msg00425.html>,
+@c for a discussion of what follows.
+@cindex 用于版本控制快照的版本号
+有时候，我们为软件包上游的版本控制系统（VCS）的快照而不是正式发布版打包。这是特殊情况，因为决定哪个是稳定版的权力应该属于上游开发者。然而，有时候这是必须的。那么，我们该如何决定写在@code{version}里的版本号呢？
+
+显然，我们需要让VCS快照的commit ID在版本号中体现出来，但是我们也需要确保版本号单调递增，以便@command{guix package
+--upgrade}决定哪个版本号更新。由于commit ID，尤其是Git的commit
+ID，不是单调递增的，我们添加一个每次升级快照时都手动增长的revision数字。最后的版本号字符串看起来是这样：
+
+@example
+2.0.11-3.cabba9e
+  ^    ^    ^
+  |    |    `-- 上游的commit ID
+  |    |
+  |    `--- Guix软件包的revision
+  |
+最新的上游版本号
+@end example
+
+It is a good idea to strip commit identifiers in the @code{version} field
+to, say, 7 digits.  It avoids an aesthetic annoyance (assuming aesthetics
+have a role to play here) as well as problems related to OS limits such as
+the maximum shebang length (127 bytes for the Linux kernel).  It is best to
+use the full commit identifiers in @code{origin}s, though, to avoid
+ambiguities.  A typical package definition may look like this:
+
+@lisp
+(define my-package
+  (let ((commit "c3f29bc928d5900971f65965feaae59e1272a3f7")
+        (revision "1"))          ;Guix软件包的revision
+    (package
+      (version (git-version "0.9" revision commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "git://example.org/my-package.git")
+                      (commit commit)))
+                (sha256 (base32 "1mbikn@dots{}"))
+                (file-name (git-file-name name version))))
+      ;; @dots{}
+      )))
+@end lisp
+
+@node 简介和描述
+@subsection 简介和描述
+
+@cindex 软件包描述
+@cindex 软件包简介
+我们已经看到，GNU@tie{}Guix里的每个软件包都包含一个简介（synopsis）和一个描述（description）（@pxref{定义软件包}）。简介和描述很重要：它们是@command{guix package
+--search}搜索的信息，并且是帮助用户决定一个软件包是否符合自己需求的重要信息。因此，打包的人应该关注怎样写它们的内容。
+
+简介必须以大写字母开头，并且不能以句号结尾。它们不能以 ``a'' 或者 ``the'' 等没有意义的词开头。例如 ``File-frobbing
+tool'' 要比 ``A tool that frobs files'' 更好。简介需要说明软件包是什么－－如 ``Core GNU
+utilities (file, text, shell)''，或者它的用途－－如 GNU@tie{}grep 的简介是 ``Print lines
+matching a pattern''。
+
+记住，简介必须能被广大的听众理解。例如，“以SAM格式修改对齐”可能对经验丰富的生物信息科研工作者来说能理解，但是对普通对听众则是无用的甚至是令人误解的。简介最好说明软件包应用的领域。在这个例子中，应该这样描述“修改核苷酸序列的对齐格式”，这会让用户更容易判断这是不是他们想要的。
+
+描述应该在5至10句话之间。使用完整的句子，并且避免在未介绍的情况下使用缩写。请避免推广营销性对词汇，如“世界领先”，“行业最强”，“下一代”，并且避免高级的形容词，如“最先进的”--他们对用户寻找软件包是无用的，甚至是可疑的。相反的，尽量务实，提及用例和功能。
+
+@cindex 软件包描述里的Texinfo标记
+描述可以含有Texinfo标记，这对格式化有帮助，如@code{@@code}、@code{@@dfn}、列表、超链接（@pxref{Overview,,,
+texinfo, GNU
+Texinfo}）。但是，在使用某些字符时应该小心，如@samp{@@}和花括号是基本的Texinfo特殊字符（@pxref{Special
+Characters,,, texinfo, GNU Texinfo}）。@command{guix package
+--show}之类的用户界面会解决渲染问题。
+
+Synopses and descriptions are translated by volunteers
+@uref{https://translationproject.org/domain/guix-packages.html, at the
+Translation Project} so that as many users as possible can read them in
+their native language.  User interfaces search them and display them in the
+language specified by the current locale.
+
+为了让@command{xgettext}可以把它们提取成待翻译的字符串，简介和描述@emph{必须是文字字符串}。这意味着你不能使用@code{string-append}或@code{format}来合成字符串：
+
+@lisp
+(package
+  ;; @dots{}
+  (synopsis "这是可以翻译的")
+  (description (string-append "这是" "*不可以*" "翻译的")))
+@end lisp
+
+翻译是很繁重的工作，所以，作为打包者请更加注意你的简介和介绍，每一个改动都会增加翻译的工作量。为了帮助他们，你可以插入这类可以被他们看到的建议和指示（@pxref{xgettext
+Invocation,,, gettext, GNU Gettext}）：
+
+@example
+;; TRANSLATORS: "X11 resize-and-rotate"不需要翻译。
+(description "ARandR为X11 resize-and-rotate (RandR)扩展提供简单的图形界面。@dots{}")
+@end example
+
+
+@node Python模块
+@subsection Python模块
+
+@cindex python
+我们目前为Python 2和Python 3打包，如@ref{版本号}的规则所述，它们的Scheme变量名分别是@code{python-2}和@code{python}。为了避免和其他编程语言的冲突，Python模块的软件包名字最好含有@code{python}。
+
+Some modules are compatible with only one version of Python, others with
+both.  If the package Foo is compiled with Python 3, we name it
+@code{python-foo}.  If it is compiled with Python 2, we name it
+@code{python2-foo}.  Packages should be added when they are necessary; we
+don't add Python 2 variants of the package unless we are going to use them.
+
+如果一个项目的名字已经含有@code{python}这个单词，我们把它丢掉；例如，python-dateutil模块打包后的名字是@code{python-dateutil}和@code{python2-dateutil}。如果项目的名字以@code{py}开头（如@:
+@code{pytz}），我们把它保留，并且添加上面所述的前缀。
+
+@subsubsection 指定依赖
+@cindex Python软件包的输入
+
+Python软件包的依赖信息通常在包的源代码树里，各种文件有不同的精确度：@file{setup.py}文件，@file{requirements.txt}文件，@file{tox.ini}文件。
+
+你在写软件包配方时的任务是把这些依赖转换成相应的“输入”（@pxref{软件包引用,
+inputs}）。尽管@code{pypi}导入工具通常可以做得很好（@pxref{调用guix import}），你可能想检查下面这个清单，以决定每个依赖放在哪儿。
+
+@itemize
+
+@item
+默认地，我们为Python 2打包时像Python
+3一样安装了@code{setuptools}和@code{pip}。所以你不需要把它们两个指定为依赖，否则@command{guix
+lint}会警告你。
+
+@item
+运行时需要的Python依赖要放进@code{propagated-inputs}。它们通常由@file{setup.py}文件里的@code{install_requires}关键字或@file{requirements.txt}文件定义。
+
+@item
+仅在构建时依赖的Python包--如，@file{setup.py}里的@code{setup_requires}关键字列举的包--或仅在测试时依赖的包--如，@code{tests_require}里的包--要放进@code{native-inputs}。因为，（1）在运行时不需要它们，因此不需要propagate，并且（2）在交叉编译时，它们属于“native”输入。
+
+例如@code{pytest}，@code{mock}，@code{nose}测试框架。当然，如果在运行时需要这里的任何一个包，它需要被加进@code{propagated-inputs}。
+
+@item
+任何不属于上述类别的包都要被加进@code{inputs}，如，构建含有C语言扩展的Python包所需的程序和C语言库。
+
+@item
+如果一个Python软件包由可选的依赖（@code{extras_require}），由你根据它们的性价比（用处/负担）决定是否添加它们（@pxref{提交补丁, @command{guix size}}）。
+
+@end itemize
+
+
+@node Perl模块
+@subsection Perl模块
+
+@cindex perl
+Perl程序和其它软件包的命名规则类似，用小写的上游名字命名。对于仅包含一个类的Perl包，我们使用小写的类名，把所有的@code{::}替换成破折号，并且添加@code{perl-}前缀。所以类@code{XML::Parser}变成@code{perl-xml-parser}。包含多个类的模块保留它们上游的名字，并且添加@code{perl-}前缀。这类模块的名字通常含有@code{perl}，这个单词需要被删掉。例如，@code{libwww-perl}变成@code{perl-libwww}。
+
+
+@node Java包
+@subsection Java包
+
+@cindex java
+Java程序和其它软件包的命名规则类似，用小写的上游名字命名。
+
+为了避免和其它编程语言混淆和命名冲突，Java软件包的名字最好有@code{java-}前缀。如果一个项目的名字已经含有@code{java}，我们把它删掉；例如，@code{ngsjava}打包后的名字是@code{java-ngs}。
+
+对于仅包含一个或很少几个类的Java软件包，我们使用小写的类名，把所有的@code{.}替换成破折号，并且添加@code{java-}前缀。因此，类@code{apache.commons.cli}打包后的名字是@code{java-apache-commons-cli}。
+
+
+@node Rust Crates
+@subsection Rust Crates
+
+@cindex rust
+Rust programs standing for themselves are named as any other package, using
+the lowercase upstream name.
+
+To prevent namespace collisions we prefix all other Rust packages with the
+@code{rust-} prefix.  The name should be changed to lowercase as appropriate
+and dashes should remain in place.
+
+In the rust ecosystem it is common for multiple incompatible versions of a
+package to be used at any given time, so all packages should have a
+versioned suffix.  If a package has passed version 1.0.0 then just the major
+version number is sufficient (e.g.@: @code{rust-clap-2}), otherwise the
+version suffix should contain both the major and minor version (e.g.@:
+@code{rust-rand-0.6}).
+
+Because of the difficulty in reusing rust packages as pre-compiled inputs
+for other packages the Cargo build system (@pxref{构建系统,
+@code{cargo-build-system}}) presents the @code{#:cargo-inputs} and
+@code{cargo-development-inputs} keywords as build system arguments.  It
+would be helpful to think of these as similar to @code{propagated-inputs}
+and @code{native-inputs}.  Rust @code{dependencies} and
+@code{build-dependencies} should go in @code{#:cargo-inputs}, and
+@code{dev-dependencies} should go in @code{#:cargo-development-inputs}.  If
+a Rust package links to other libraries then the standard placement in
+@code{inputs} and the like should be used.
+
+Care should be taken to ensure the correct version of dependencies are used;
+to this end we try to refrain from skipping the tests or using
+@code{#:skip-build?} when possible.  Of course this is not always possible,
+as the package may be developed for a different Operating System, depend on
+features from the Nightly Rust compiler, or the test suite may have
+atrophied since it was released.
+
+
+@node 字体
+@subsection 字体
+
+@cindex 字体
+对于通常不会被用户安装用于排版的字体，或者随更大的软件包分发的字体，我们使用通常的命名规则。例如，这适用于X.Org系统附带的字体或TeX
+Live附带的字体。
+
+为了让用户更容易搜索字体，其它仅含有字体的软件包按以下规则命名，不管上游的包名是什么。
+
+仅含有一个字体家族的软件包需要以@code{font-}开头；如果作者名字已知，则添加作者名字和@code{-}，接着是字体家族名字（把空格替换成破折号），（和通常一样，把所有的大写字母转换成小写字母）。例如，由SIL设计的Gentium字体家族打包后的名字是@code{font-sil-gentium}。
+
+对于一个含有多个字体家族的软件包，用集合的名字替换字体家族的名字。例如，Liberation字体含有三个家族，Liberation
+Sans、Liberation Serif和Liberation
+Mono。它们可以用@code{font-liberation-sans}等名字分开打包；但是由于它们以一个共同的名字分发，我们倾向于以@code{font-liberation}名字统一打包。
+
+当同一个字体家族或字体集合的不同格式分开打包时，把破折号和格式（缩写）添加在软件包名字后面。我们用@code{-ttf}代表TrueType字体，@code{-otf}代表OpenType字体，@code{-type1}代表PostScript
+Type 1字体。
+
+
+@node 代码风格
+@section 代码风格
+
+总的来说，我们的代码遵循GNU代码规范（@pxref{Top,,, standards,
+GNU代码规范}）。但是，这个规范对Scheme的介绍不多，所以这儿提供一些额外的规则。
+
+@menu
+* 编程范例::             怎样合成元素。
+* 模块::                   在哪里保存代码？
+* 数据类型和模式匹配::  实现数据结构。
+* 格式化代码::          书写规范。
+@end menu
+
+@node 编程范例
+@subsection 编程范例
+
+Guix里的Scheme代码是以纯函数的风格写的。一个例外是有关输入/输出的代码，和实现底层概念的过程，如@code{memoize}过程。
+
+@node 模块
+@subsection 模块
+
+用于构建的Guile模块必须放在@code{(guix build
+@dots{})}命名空间里。它们不允许引用其它Guix或GNU模块。但是，主机端（host-side)模块可以使用构建端（build-side）模块。
+
+关于更广的GNU系统的模块应该在@code{(gnu @dots{})}命名空间里而不是@code{(guix @dots{})}。
+
+@node 数据类型和模式匹配
+@subsection 数据类型和模式匹配
+
+经典的Lisp倾向于用列表表示所有的东西，然后用@code{car}，@code{cdr}，@code{cadr}等手动浏览它们。这种风格有几个问题，特别是难以阅读，易出错，并且妨碍生成合适的类型错误报告。
+
+Guix代码应该定义合适的数据类型（例如，用@code{define-record-type*}）而不是滥用列表。而且，它应该利用Guile的@code{(ice-9
+match)}模块使用模式匹配，特别是匹配列表的时候。
+
+@node 格式化代码
+@subsection 格式化代码
+
+@cindex 格式化代码
+@cindex 代码风格
+When writing Scheme code, we follow common wisdom among Scheme programmers.
+In general, we follow the
+@url{https://mumble.net/~campbell/scheme/style.txt, Riastradh's Lisp Style
+Rules}.  This document happens to describe the conventions mostly used in
+Guile’s code too.  It is very thoughtful and well written, so please do read
+it.
+
+一些Guix添加的special
+form，如@code{substitute*}宏，有特殊的缩进规则。它们的规则在@file{.dir-locals.el}文件里定义，Emacs会自动使用。另外，Emacs-Guix提供的@code{guix-devel-mode}模式可以正确地缩进和高亮Guix代码（@pxref{开发,,,
+emacs-guix, Emacs-Guix参考手册}）。
+
+@cindex 代码缩进
+@cindex 代码格式化
+如果你不使用Emacs，请确保让你的编辑器知道这些规则。为了自动地缩进软件包定义，你也可以运行：
+
+@example
+./etc/indent-code.el gnu/packages/@var{文件}.scm @var{软件包}
+@end example
+
+@noindent
+这会调用Emacs以批处理模式自动地缩进@file{gnu/packages/@var{文件}.scm}里@var{软件包}的定义。如果想缩进整个文件，省略第二个参数：
+
+@example
+./etc/indent-code.el gnu/services/@var{文件}.scm
+@end example
+
+@cindex Vim，编辑Scheme代码
+如果你用Vim编辑代码，我们推荐你运行@code{:set
+autoindent}，以使你在输入时自动缩进代码。另外，@uref{https://www.vim.org/scripts/script.php?script_id=3998,
+@code{paredit.vim}}可以帮你处理括号。
+
+我们要求所有的顶级过程附带一个docstring。这个要求对@code{(guix build @dots{})}命名空间里的简单的私有过程可以放宽。
+
+过程不应该有多于四个定位参数。对于接收多于四个定位参数的过程应使用关键字参数。
+
+
+@node 提交补丁
+@section 提交补丁
+
+Development is done using the Git distributed version control system.  Thus,
+access to the repository is not strictly necessary.  We welcome
+contributions in the form of patches as produced by @code{git format-patch}
+sent to the @email{guix-patches@@gnu.org} mailing list.  Seasoned Guix
+developers may also want to look at the section on commit access
+(@pxref{Commit Access}).
+
+This mailing list is backed by a Debbugs instance, which allows us to keep
+track of submissions (@pxref{Tracking Bugs and Patches}).  Each message sent
+to that mailing list gets a new tracking number assigned; people can then
+follow up on the submission by sending email to
+@code{@var{NNN}@@debbugs.gnu.org}, where @var{NNN} is the tracking number
+(@pxref{发送补丁系列}).
+
+请以ChangeLog格式（@pxref{Change Logs,,, standards,
+GNU代码规范}）写commit日志；你可以浏览commit历史里的例子。
+
+提交添加或者修改软件包定义的补丁之前，请过一遍这个检查列表：
+
+@enumerate
+@item
+如果软件包的作者为发布的文件包提供了密码学签名，请验证文件的真实性。对于独立的GPG签名文件，这可以通过@code{gpg --verify}命令完成：
+
+@item
+花些时间为软件包提供一个合适的简介和描述。更多指导，@xref{简介和描述}。
+
+@item
+运行@code{guix lint
+@var{软件包}}，@var{软件包}是新添加的或修改过的软件包的名字，修复它报告的错误（@pxref{调用guix lint}）。
+
+@item
+用@code{guix build @var{软件包}}命令确保这个软件包可以在你的平台上构建。
+
+@item
+我们建议你同时尝试在别的支持的平台上构建这个软件包。你可能没有别的平台的真实的硬件，我们推荐使用@code{qemu-binfmt-service-type}来模拟它们。为了启用这个功能，把下面这个服务添加到你的@code{操作系统}配置的服务列表里：
+
+@lisp
+(service qemu-binfmt-service-type
+ (qemu-binfmt-configuration
+   (platforms (lookup-qemu-platforms "arm" "aarch64"))
+   (guix-support? #t)))
+@end lisp
+
+然后重新配置你的系统。
+
+你之后可以用@code{--system}参数为不同的平台构建软件包。例如，为armhf，aarch64，或mips64架构构建"hello"软件包，你可以依次运行如下的命令：
+@example
+guix build --system=armhf-linux --rounds=2 hello
+guix build --system=aarch64-linux --rounds=2 hello
+@end example
+
+@item
+@cindex 构建
+请确保软件包里不捆绑出现已经被打过包的软件的副本。
+
+有时，软件包为了方便用户，捆绑了依赖库的源代码。然而，当依赖库在发行版里已经存在时，做为一个发行版，我们希望确保这些软件包使用发行版里已有的副本。这提高资源使用率（依赖库只构建一次，存储一份），并且使发行版更容易管理，如仅在一个地方对某个软件包进行安全更新就可以影响整个系统－－捆绑软件会妨碍这么做。
+
+@item
+看一下@command{guix size}（@pxref{调用guix size}）的分析报告。这会让你注意到对其它软件包无意中的引用。它也可以帮助决定是否要把一个软件包分割成几个输出（@pxref{有多个输出的软件包}），以及需要使用哪些可选的依赖。特别地，避免把@code{texlive}添加为依赖：因为它太大了，请使用@code{texlive-tiny}或@code{texlive-union}代替它。
+
+@item
+对于重要的更改，确保依赖它的软件包没有受到影响。@code{guix refresh --list-dependent
+@var{软件包}}会帮你检查（@pxref{调用guix refresh}）。
+
+@c See <https://lists.gnu.org/archive/html/guix-devel/2016-10/msg00933.html>.
+@cindex 分支策略
+@cindex 重新构建的调度策略
+取决于受影响的软件包的数量，即需要重新构建的数量，commit需要被提交到不同的分支，具体如下：
+
+@table @asis
+@item 300个或更少的受影响的软件包
+@code{master}分支（非破坏性的更改）。
+
+@item 300至1200个受影响的软件包
+@code{staging}分支（非破坏性的更改）。这个分支每隔大约3周会被合并进@code{master}。对某个主题的更改（如对GNOME系列的更新）可以放进一个特定的分支（如@code{gnome-updates}）。
+
+@item 超过1200个受影响的软件包
+@code{core-updates}分支（可能含有重要的或破坏性的更改）。这个分支每隔大约2.5个月会被合并进@code{master}。
+@end table
+
+All these branches are @uref{@value{SUBSTITUTE-SERVER}, tracked by our build
+farm} and merged into @code{master} once everything has been successfully
+built.  This allows us to fix issues before they hit users, and to reduce
+the window during which pre-built binaries are not available.
+
+@c TODO: It would be good with badges on the website that tracks these
+@c branches.  Or maybe even a status page.
+通常，@code{master}之外的其它分支如果最近被评审过，或有一个对应的@code{-next}分支，则被视为@emph{冻结}状态。如果不清楚该把补丁放到哪里，请在邮件列表或IRC上提问。
+
+@item
+@cindex 构建过程的确定性
+@cindex 检查可复现的构建
+检查软件包的构建过程是不是确定性的。这通常意味着检查对软件包的独立构建是否能得到每一个比特都完全相同的结果。
+
+为此，一个简单的做法是在你的机器上多次构建同一个软件包（@pxref{调用guix build}）：
+
+@example
+guix build --rounds=2 <我的软件包>
+@end example
+
+这足以查出一批普通的不确定性问题，如构建结果里存在时间戳或随机生成的输出。
+
+另一个选择是使用@command{guix challenge}（@pxref{调用guix challenge}）。当软件包被提交并且被@code{@value{SUBSTITUTE-SERVER}}构建之后，你可以运行这个命令检查你是否得到相同的构建结果。更好的：找另一台可以构建的机器，运行@command{guix
+publish}。由于远程的构建机器很可能和你的机器不同，这可以捕捉到由硬件不同引起的不确定性问题－－如，使用不同的指令集－－或不同操作系统内核引起的问题－－如，对@code{uname}或@file{/proc}文件的依赖。
+
+@item
+在编写文档时，请用性别中立的词语指代人，如@uref{https://en.wikipedia.org/wiki/Singular_they,
+“他”@comma{} “他的”}，等。
+
+@item
+检查你的补丁只包含一些相关的更改。把不相关的更改捆绑在一起会让评审更困难和更慢。
+
+不相关的更改的例子有：同时新增多个软件包，或更新软件包同时修补这个软件包。
+
+@item
+请遵守我们的代码格式规范，最好运行@command{etc/indent-code.el}脚本以自动为你格式化（@pxref{格式化代码}）。
+
+@item
+当可能时，请在源URL里使用镜像@pxref{调用guix download}。使用可靠的而不是生成的URL。例如，GitHub的下载文件每次生成时不一定是相同的，所以这时最好克隆仓库。不要在URL里使用@command{name}变量：这没有什么用，而且如果名字变了，URL很可能就错了。
+
+@item
+Check if Guix builds (@pxref{从Git构建}) and address the warnings,
+especially those about use of undefined symbols.
+
+@item
+Make sure your changes do not break Guix and simulate a @code{guix pull}
+with:
+@example
+guix pull --url=/path/to/your/checkout --profile=/tmp/guix.master
+@end example
+
+@end enumerate
+
+When posting a patch to the mailing list, use @samp{[PATCH] @dots{}} as a
+subject, if your patch is to be applied on a branch other than
+@code{master}, say @code{core-updates}, specify it in the subject like
+@samp{[PATCH core-updates] @dots{}}.  You may use your email client or the
+@command{git send-email} command (@pxref{发送补丁系列}).  We
+prefer to get patches in plain text messages, either inline or as MIME
+attachments.  You are advised to pay attention if your email client changes
+anything like line breaks or indentation which could potentially break the
+patches.
+
+当一个bug被修复时，请通过向@email{@var{NNN}-done@@debbugs.gnu.org}发邮件的方式关闭thread。
+
+@unnumberedsubsec 发送补丁系列
+@anchor{发送补丁系列}
+@cindex 补丁系列
+@cindex @code{git send-email}
+@cindex @code{git-send-email}
+
+@c Debbugs bug: https://debbugs.gnu.org/db/15/15361.html
+When sending a patch series (e.g., using @code{git send-email}), please
+first send one message to @email{guix-patches@@gnu.org}, and then send
+subsequent patches to @email{@var{NNN}@@debbugs.gnu.org} to make sure they
+are kept together.  See @uref{https://debbugs.gnu.org/Advanced.html, the
+Debbugs documentation} for more information.  You can install @command{git
+send-email} with @command{guix install git:send-email}.
+
+@node Tracking Bugs and Patches
+@section Tracking Bugs and Patches
+
+@cindex bug reports, tracking
+@cindex patch submissions, tracking
+@cindex issue tracking
+@cindex Debbugs, issue tracking system
+Bug reports and patch submissions are currently tracked using the Debbugs
+instance at @uref{https://bugs.gnu.org}.  Bug reports are filed against the
+@code{guix} ``package'' (in Debbugs parlance), by sending email to
+@email{bug-guix@@gnu.org}, while patch submissions are filed against the
+@code{guix-patches} package by sending email to
+@email{guix-patches@@gnu.org} (@pxref{提交补丁}).
+
+A web interface (actually @emph{two} web interfaces!) are available to
+browse issues:
+
+@itemize
+@item
+@url{https://bugs.gnu.org/guix} lists bug reports;
+@item
+@url{https://bugs.gnu.org/guix-patches} lists patch submissions.
+@end itemize
+
+You can also access both of these @i{via} the (nicer)
+@url{https://issues.guix.gnu.org} interface@footnote{The web interface at
+@url{https://issues.guix.gnu.org} is powered by Mumi, a nice piece of
+software written in Guile, and you can help! See
+@url{https://git.elephly.net/gitweb.cgi?p=software/mumi.git}.}.  To view
+discussions related to issue number @var{n}, go to
+@indicateurl{https://issues.guix.gnu.org/issue/@var{n}} or
+@indicateurl{https://bugs.gnu.org/@var{n}}.
+
+If you use Emacs, you may find it more convenient to interact with issues
+using @file{debbugs.el}, which you can install with:
+
+@example
+guix install emacs-debbugs
+@end example
+
+For example, to list all open issues on @code{guix-patches}, hit:
+
+@example
+@kbd{C-u} @kbd{M-x} debbugs-gnu @kbd{RET} @kbd{RET} guix-patches @kbd{RET} n y
+@end example
+
+@xref{Top,,, debbugs-ug, Debbugs User Guide}, for more information on this
+nifty tool!
+
+@node Commit Access
+@section Commit Access
+
+@cindex commit access, for developers
+For frequent contributors, having write access to the repository is
+convenient.  When you deem it necessary, consider applying for commit access
+by following these steps:
+
+@enumerate
+@item
+Find three committers who would vouch for you.  You can view the list of
+committers at
+@url{https://savannah.gnu.org/project/memberlist.php?group=guix}.  Each of
+them should email a statement to @email{guix-maintainers@@gnu.org} (a
+private alias for the collective of maintainers), signed with their OpenPGP
+key.
+
+Committers are expected to have had some interactions with you as a
+contributor and to be able to judge whether you are sufficiently familiar
+with the project's practices.  It is @emph{not} a judgment on the value of
+your work, so a refusal should rather be interpreted as ``let's try again
+later''.
+
+@item
+Send @email{guix-maintainers@@gnu.org} a message stating your intent,
+listing the three committers who support your application, signed with the
+OpenPGP key you will use to sign commits, and giving its fingerprint (see
+below).  See @uref{https://emailselfdefense.fsf.org/en/}, for an
+introduction to public-key cryptography with GnuPG.
+
+@c See <https://sha-mbles.github.io/>.
+Set up GnuPG such that it never uses the SHA1 hash algorithm for digital
+signatures, which is known to be unsafe since 2019, for instance by adding
+the following line to @file{~/.gnupg/gpg.conf} (@pxref{GPG Esoteric
+Options,,, gnupg, The GNU Privacy Guard Manual}):
+
+@example
+digest-algo sha512
+@end example
+
+@item
+Maintainers ultimately decide whether to grant you commit access, usually
+following your referrals' recommendation.
+
+@item
+@cindex OpenPGP, signed commits
+If and once you've been given access, please send a message to
+@email{guix-devel@@gnu.org} to say so, again signed with the OpenPGP key you
+will use to sign commits (do that before pushing your first commit).  That
+way, everyone can notice and ensure you control that OpenPGP key.
+
+@quotation Important
+Before you can push for the first time, maintainers must:
+
+@enumerate
+@item
+add your OpenPGP key to the @code{keyring} branch;
+@item
+add your OpenPGP fingerprint to the @file{.guix-authorizations} file of the
+branch(es) you will commit to.
+@end enumerate
+@end quotation
+
+@item
+Make sure to read the rest of this section and... profit!
+@end enumerate
+
+@quotation 注
+Maintainers are happy to give commit access to people who have been
+contributing for some time and have a track record---don't be shy and don't
+underestimate your work!
+
+However, note that the project is working towards a more automated patch
+review and merging system, which, as a consequence, may lead us to have
+fewer people with commit access to the main repository.  Stay tuned!
+@end quotation
+
+If you get commit access, please make sure to follow the policy below
+(discussions of the policy can take place on @email{guix-devel@@gnu.org}).
+
+Non-trivial patches should always be posted to @email{guix-patches@@gnu.org}
+(trivial patches include fixing typos, etc.).  This mailing list fills the
+patch-tracking database (@pxref{Tracking Bugs and Patches}).
+
+For patches that just add a new package, and a simple one, it's OK to
+commit, if you're confident (which means you successfully built it in a
+chroot setup, and have done a reasonable copyright and license auditing).
+Likewise for package upgrades, except upgrades that trigger a lot of
+rebuilds (for example, upgrading GnuTLS or GLib).  We have a mailing list
+for commit notifications (@email{guix-commits@@gnu.org}), so people can
+notice.  Before pushing your changes, make sure to run @code{git pull
+--rebase}.
+
+All commits that are pushed to the central repository on Savannah must be
+signed with an OpenPGP key, and the public key should be uploaded to your
+user account on Savannah and to public key servers, such as
+@code{keys.openpgp.org}.  To configure Git to automatically sign commits,
+run:
+
+@example
+git config commit.gpgsign true
+git config user.signingkey CABBA6EA1DC0FF33
+@end example
+
+You can prevent yourself from accidentally pushing unsigned commits to
+Savannah by using the pre-push Git hook called located at
+@file{etc/git/pre-push}:
+
+@example
+cp etc/git/pre-push .git/hooks/pre-push
+@end example
+
+When pushing a commit on behalf of somebody else, please add a
+@code{Signed-off-by} line at the end of the commit log message---e.g., with
+@command{git am --signoff}.  This improves tracking of who did what.
+
+When adding channel news entries (@pxref{通道, Writing Channel News}),
+make sure they are well-formed by running the following command right before
+pushing:
+
+@example
+make check-channel-news
+@end example
+
+For anything else, please post to @email{guix-patches@@gnu.org} and leave
+time for a review, without committing anything (@pxref{提交补丁}).  If you didn’t receive any reply after two weeks, and if you're
+confident, it's OK to commit.
+
+That last part is subject to being adjusted, allowing individuals to commit
+directly on non-controversial changes on parts they’re familiar with.
+
+One last thing: the project keeps moving forward because committers not only
+push their own awesome changes, but also offer some of their time
+@emph{reviewing} and pushing other people's changes.  As a committer, you're
+welcome to use your expertise and commit rights to help other contributors,
+too!

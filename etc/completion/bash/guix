@@ -1,0 +1,274 @@
+# GNU Guix --- Functional package management for GNU
+# Copyright © 2015, 2016, 2017, 2018, 2019, 2020 Ludovic Courtès <ludo@gnu.org>
+#
+# This file is part of GNU Guix.
+#
+# GNU Guix is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or (at
+# your option) any later version.
+#
+# GNU Guix is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
+
+# Bash completion for Guix commands.
+
+declare _guix_available_packages
+
+_guix_complete_subcommand ()
+{
+    local command="${COMP_WORDS[1]}"
+    local subcommands="$(${COMP_WORDS[0]} $command --help 2> /dev/null \
+                         | grep '^   [a-z]' \
+                         | sed -e's/^ \+\([a-z-]\+\).*$/\1/g')"
+    COMPREPLY=($(compgen -W "$subcommands" -- "${COMP_WORDS[$COMP_CWORD]}"))
+}
+
+_guix_complete_available_package ()
+{
+    local prefix="$1"
+    if [ -z "$_guix_available_packages" ]
+    then
+	# Cache the complete list because it rarely changes and makes
+	# completion much faster.
+	_guix_available_packages="$(${COMP_WORDS[0]} package -A 2> /dev/null \
+                                    | cut -f1)"
+    fi
+    COMPREPLY=($(compgen -W "$_guix_available_packages" -- "$prefix"))
+}
+
+_guix_complete_installed_package ()
+{
+    # Here we do not cache the list of installed packages because that
+    # may change over time and the list is relatively small anyway.
+    local prefix="$1"
+    local packages="$(${COMP_WORDS[0]} package -I "^$prefix" 2> /dev/null \
+                      | cut -f1)"
+    COMPREPLY=($(compgen -W "$packages" -- "$prefix"))
+}
+
+_guix_complete_option ()
+{
+    local subcommand
+    case "${COMP_WORDS[2]}" in
+	-*)     subcommand="";;
+	[a-z]*) subcommand="${COMP_WORDS[2]}";;
+    esac
+    local options="$(${COMP_WORDS[0]} ${COMP_WORDS[1]} $subcommand --help 2> /dev/null \
+                            | grep '^  \+-' \
+                            | sed -e's/^.*--\([a-zA-Z0-9_-]\+\)\(=\?\).*/--\1\2/g')"
+    compopt -o nospace
+    COMPREPLY=($(compgen -W "$options" -- "${COMP_WORDS[${#COMP_WORDS[*]} - 1]}"))
+}
+
+_guix_is_command ()
+{
+    local word
+    local result="false"
+    for word in ${COMP_WORDS[*]}
+    do
+	if [ "$word" = "$1" ]
+	then
+	    result=true
+	    break
+	fi
+    done
+    $result
+}
+
+_guix_is_removing ()
+{
+    local word
+    local result="false"
+    for word in ${COMP_WORDS[*]}
+    do
+	case "$word" in
+	    --remove|--remove=*|-r)
+		result=true
+		break
+		;;
+	esac
+    done
+    $result
+}
+
+_guix_is_dash_L ()
+{
+    [ "${COMP_WORDS[$COMP_CWORD - 1]}" = "-L" ] \
+	|| { case "${COMP_WORDS[$COMP_CWORD]}" in
+		 --load-path=*) true;;
+		 *)             false;;
+	     esac }
+}
+
+_guix_is_dash_m ()
+{
+    [ "${COMP_WORDS[$COMP_CWORD - 1]}" = "-m" ] \
+	|| { case "${COMP_WORDS[$COMP_CWORD]}" in
+		 --manifest=*) true;;
+		 *)            false;;
+	     esac }
+}
+
+_guix_is_dash_C ()
+{
+    [ "${COMP_WORDS[$COMP_CWORD - 1]}" = "-C" ] \
+	|| { case "${COMP_WORDS[$COMP_CWORD]}" in
+		 --channels=*)  true;;
+		 *)             false;;
+	     esac }
+}
+
+_guix_is_dash_p ()
+{
+    [ "${COMP_WORDS[$COMP_CWORD - 1]}" = "-p" ] \
+	|| { case "${COMP_WORDS[$COMP_CWORD]}" in
+		 --profile=*)   true;;
+		 *)             false;;
+	     esac }
+}
+
+_guix_complete_file ()
+{
+    # Let Readline complete file names.
+    compopt -o default
+    COMPREPLY=()
+}
+
+_guix_complete_pid ()
+{
+    local pids="$(cd /proc; echo [0-9]*)"
+    COMPREPLY=($(compgen -W "$pids" -- "$1"))
+}
+
+declare _guix_subcommands
+
+_guix_complete_subcommand ()
+{
+    if [ -z "$_guix_subcommands" ]
+    then
+	# Cache the list of subcommands to speed things up.
+	_guix_subcommands="$(guix --help 2> /dev/null \
+                                     | grep '^  ' | cut -c 2-)"
+    fi
+    COMPREPLY=($(compgen -W "$_guix_subcommands" -- "$word_at_point"))
+}
+
+_guix_complete ()
+{
+    local word_count=${#COMP_WORDS[*]}
+    local word_at_point="${COMP_WORDS[$COMP_CWORD]}"
+
+    if [ "$COMP_CWORD" -gt 1 ]
+    then
+	case "$word_at_point" in
+	    -*)
+		_guix_complete_option "$word_at_point"
+		return
+		;;
+	esac
+    fi
+
+    case $COMP_CWORD in
+	1)
+	    _guix_complete_subcommand
+	    ;;
+	*)
+	    if _guix_is_command "package"
+	    then
+		if _guix_is_dash_L || _guix_is_dash_m
+		then
+		    _guix_complete_file
+		elif _guix_is_removing
+		then
+		    _guix_complete_installed_package "$word_at_point"
+		else
+		    _guix_complete_available_package "$word_at_point"
+		fi
+	    elif _guix_is_command "install"
+	    then
+                if _guix_is_dash_L || _guix_is_dash_m || _guix_is_dash_p
+                then
+                    _guix_complete_file
+		else
+		    _guix_complete_available_package "$word_at_point"
+		fi
+	    elif _guix_is_command "remove"
+	    then
+                if _guix_is_dash_L || _guix_is_dash_m || _guix_is_dash_p
+                then
+                    _guix_complete_file
+		else
+		    _guix_complete_installed_package "$word_at_point"
+		fi
+	    elif _guix_is_command "upgrade"
+	    then
+                if _guix_is_dash_L || _guix_is_dash_m || _guix_is_dash_p
+                then
+                    _guix_complete_file
+		else
+		    _guix_complete_installed_package "$word_at_point"
+		fi
+            elif _guix_is_command "build"
+            then
+                if _guix_is_dash_L || _guix_is_dash_m
+                then
+                    _guix_complete_file
+		else
+		    _guix_complete_available_package "$word_at_point"
+                fi
+	    elif _guix_is_command "download"
+	    then
+		 _guix_complete_file
+	    elif _guix_is_command "system"
+	    then
+		case $COMP_CWORD in
+		    2) _guix_complete_subcommand;;
+		    *) _guix_complete_file;; # TODO: restrict to *.scm
+		esac
+            elif _guix_is_command "pull"
+            then
+                if _guix_is_dash_C || _guix_is_dash_p
+                then
+                    _guix_complete_file
+                fi
+            elif _guix_is_command "time-machine"
+            then
+                if _guix_is_dash_C
+                then
+                    _guix_complete_file
+		else
+		    _guix_complete_subcommand
+                fi
+	    elif _guix_is_command "container"
+	    then
+		case $COMP_CWORD in
+		    2) _guix_complete_subcommand;;
+		    3) _guix_complete_pid "$word_at_point";;
+		    *) _guix_complete_file;;
+		esac
+	    elif _guix_is_command "import"
+	    then
+		_guix_complete_subcommand
+	    elif _guix_is_command "hash" || _guix_is_command "gc"
+	    then
+		_guix_complete_file
+            elif _guix_is_command "weather"
+            then
+                if _guix_is_dash_m
+                then
+                    _guix_complete_file
+                fi
+	    else
+		_guix_complete_available_package "$word_at_point"
+	    fi
+	    ;;
+    esac
+}
+
+complete -F _guix_complete guix

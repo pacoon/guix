@@ -1,0 +1,346 @@
+This is guix.ru.info, produced by makeinfo version 6.7 from
+guix.ru.texi.
+
+Copyright © 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Ludovic
+Courtès
+Copyright © 2013, 2014, 2016 Andreas Enge
+Copyright © 2013 Nikita Karetnikov
+Copyright © 2014, 2015, 2016 Alex Kost
+Copyright © 2015, 2016 Mathieu Lirzin
+Copyright © 2014 Pierre-Antoine Rault
+Copyright © 2015 Taylan Ulrich Bayırlı/Kammer
+Copyright © 2015, 2016, 2017, 2019, 2020 Leo Famulari
+Copyright © 2015, 2016, 2017, 2018, 2019, 2020 Ricardo Wurmus
+Copyright © 2016 Ben Woodcroft
+Copyright © 2016, 2017, 2018 Chris Marusich
+Copyright © 2016, 2017, 2018, 2019, 2020 Efraim Flashner
+Copyright © 2016 John Darrington
+Copyright © 2016, 2017 Nikita Gillmann
+Copyright © 2016, 2017, 2018, 2019, 2020 Jan Nieuwenhuizen
+Copyright © 2016, 2017, 2018, 2019, 2020 Julien Lepiller
+Copyright © 2016 Alex ter Weele
+Copyright © 2016, 2017, 2018, 2019 Christopher Baines
+Copyright © 2017, 2018, 2019 Clément Lassieur
+Copyright © 2017, 2018 Mathieu Othacehe
+Copyright © 2017 Federico Beffa
+Copyright © 2017, 2018 Carlo Zancanaro
+Copyright © 2017 Thomas Danckaert
+Copyright © 2017 humanitiesNerd
+Copyright © 2017 Christopher Allan Webber
+Copyright © 2017, 2018, 2019, 2020 Marius Bakke
+Copyright © 2017, 2019, 2020 Hartmut Goebel
+Copyright © 2017, 2019, 2020 Maxim Cournoyer
+Copyright © 2017, 2018, 2019, 2020 Tobias Geerinckx-Rice
+Copyright © 2017 George Clemmer
+Copyright © 2017 Andy Wingo
+Copyright © 2017, 2018, 2019 Arun Isaac
+Copyright © 2017 nee
+Copyright © 2018 Rutger Helling
+Copyright © 2018 Oleg Pykhalov
+Copyright © 2018 Mike Gerwitz
+Copyright © 2018 Pierre-Antoine Rouby
+Copyright © 2018, 2019 Gábor Boskovits
+Copyright © 2018, 2019 Florian Pelz
+Copyright © 2018 Laura Lazzati
+Copyright © 2018 Alex Vong
+Copyright © 2019 Josh Holland
+Copyright © 2019, 2020 Diego Nicola Barbato
+Copyright © 2019 Ivan Petkov
+Copyright © 2019 Jakob L. Kreuze
+Copyright © 2019 Kyle Andrews
+Copyright © 2019 Alex Griffin
+Copyright © 2019 Guillaume Le Vaillant
+Copyright © 2020 Leo Prikler
+Copyright © 2019, 2020 Simon Tournier
+Copyright © 2020 Wiktor Żelazny
+Copyright © 2020 Damien Cassou
+Copyright © 2020 Jakub Kądziołka
+Copyright © 2020 Jack Hill
+Copyright © 2020 Naga Malleswari
+Copyright © 2020 Brice Waegeneire
+Copyright © 2020 R Veera Kumar
+Copyright © 2020 Pierre Langlois
+Copyright © 2020 pinoaffe
+
+   Разрешено копирование, распространение и/или модификация этого
+документа на условиях лицензии свободной документации GNU (GNU FDL)
+версии 1.3 или любой более поздней версии, опубликованной Фондом
+свободного программного обеспечения (FSF), исключая неизменяемые секции,
+исключая тексты, размещенные на переплёте и задней стороне обложки.
+Копия лицензии включена в документ в разделе под названием "GNU Free
+Documentation Licens".
+INFO-DIR-SECTION Администрирование системы
+START-INFO-DIR-ENTRY
+* Guix: (guix).              Управление установленным
+                               ПО и настройка системы
+* guix package: (guix)Запуск guix package.  Установка,
+                                                    удаление и
+                                                    обновление
+                                                    пакетов
+* guix gc: (guix)Запуск guix gc.  Освобождение
+                                          неиспользуемого
+                                          места на диске
+* guix pull: (guix)Запуск guix pull.  Обновление
+                                              списка доступных
+                                              пакетов
+* guix system: (guix)Запуск guix system.  Управление
+                                                  конфигурацией
+                                                  ОС
+* guix deploy: (guix)Запуск guix deploy.  Управление
+                                                  конфигурациями
+                                                  ОС на удалённых
+                                                  машинах
+END-INFO-DIR-ENTRY
+
+INFO-DIR-SECTION Разработка программного обеспечения
+START-INFO-DIR-ENTRY
+* guix environment: (guix)Запуск guix environment.  Сборка
+                                                            среды
+                                                            разработки
+                                                            с помощью
+                                                            Guix
+* guix build: (guix)Запуск guix build.  Сборка пакетов
+* guix pack: (guix)Запуск guix pack.  Создание
+                                              бинарных пакетов
+END-INFO-DIR-ENTRY
+
+
+Indirect:
+guix.ru.info-1: 5313
+guix.ru.info-2: 309238
+guix.ru.info-3: 608871
+guix.ru.info-4: 916039
+guix.ru.info-5: 1208973
+
+Tag Table:
+(Indirect)
+Node: Top5313
+Node: Введение28829
+Ref: Введение-Footnote-130376
+Ref: Введение-Footnote-230428
+Node: Управление программным обеспечением Guix Way30856
+Node: Дистрибутив GNU35697
+Ref: Дистрибутив GNU-Footnote-139468
+Node: Установка39605
+Ref: Установка-Footnote-142322
+Node: Бинарная установка42689
+Node: Требования50548
+Node: Запуск набора тестов53476
+Node: Настройка демона56950
+Node: Установка окружения сборки59076
+Ref: Установка окружения сборки-Footnote-165186
+Ref: Установка окружения сборки-Footnote-265743
+Node: Установка демона разгрузки65944
+Ref: Установка демона разгрузки-Footnote-177038
+Node: Поддержка SELinux77177
+Node: Вызов guix-daemon82898
+Ref: daemon-substitute-urls86345
+Node: Установка приложения97662
+Ref: locales-and-locpath98315
+Node: Обновление Guix107239
+Node: Установка системы107877
+Node: Ограничения110502
+Node: По поводу железа112095
+Node: Установочная флеш и DVD114986
+Node: Подготовка к установке118928
+Node: Графическая установка в GUI120619
+Node: Ручная установка123205
+Node: Раскладка клавиатуры и работа с сетью и разбиение диска124919
+Ref: Раскладка клавиатуры и работа с сетью и разбиение диска-Footnote-1135407
+Ref: Раскладка клавиатуры и работа с сетью и разбиение диска-Footnote-2135587
+Node: В продолжении установки136036
+Node: После установки системы141959
+Node: Установка Guix на виртуальную машину143698
+Node: Сборка установочного образа146090
+Node: Управление пакетами147757
+Node: Особенности150697
+Node: Вызов guix package158052
+Ref: package-cmd-propagated-inputs163389
+Ref: profile-manifest169345
+Ref: guix-search177134
+Node: Подстановки185992
+Node: Официальный сервер подстановок189290
+Node: Авторизация сервера подстановок191831
+Node: Аутентификация подстановок194809
+Node: Настройки proxy196976
+Node: Ошибки при подстановке197612
+Node: Касательно проверенных бинарников199563
+Node: Пакеты со множественным выходом202661
+Node: Вызов guix gc206156
+Node: Запуск guix pull218835
+Node: Каналы229562
+Node: Вызов guix time-machine246029
+Node: Младшие версии248102
+Node: Вызов guix describe256426
+Node: Вызов guix archive260888
+Node: Разработка269801
+Node: Запуск guix environment271250
+Ref: Запуск guix environment-Footnote-1287694
+Ref: Запуск guix environment-Footnote-2288207
+Node: Запуск guix pack288322
+Ref: Запуск guix pack-Footnote-1303761
+Node: Тулчейн GCC309238
+Node: Программный интерфейс310304
+Node: Пакетные модули312933
+Ref: Пакетные модули-Footnote-1315373
+Ref: Пакетные модули-Footnote-2315708
+Node: Описание пакетов316018
+Node: Интерфейс package326967
+Ref: package-propagated-inputs329780
+Node: Интерфейс origin333066
+Node: Системы сборки337830
+Ref: Системы сборки-Footnote-1380559
+Node: Хранилище380667
+Node: Деривации386553
+Node: Устройство склада394961
+Ref: Устройство склада-Footnote-1406777
+Node: G-Expressions406973
+Ref: G-Expressions-Footnote-1430720
+Node: Запуск guix repl431024
+Node: Утилиты433222
+Node: Запуск guix build435540
+Node: Стандартные параметры сборки438385
+Ref: fallback-option440027
+Ref: client-substitute-urls440221
+Node: Параметры преобразования пакета444665
+Node: Дополнительные параметры сборки450770
+Ref: build-check458967
+Node: Отладка ошибок сборки461508
+Node: Запуск guix edit464625
+Node: Запуск guix download465784
+Node: Запуск guix hash468249
+Node: Запуск guix import470583
+Ref: Запуск guix import-Footnote-1484746
+Node: Запуск guix refresh484836
+Node: Запуск guix lint496414
+Node: Запуск guix size501705
+Ref: Запуск guix size-Footnote-1506766
+Node: Запуск guix graph507000
+Node: Запуск guix publish515949
+Node: Запуск guix challenge525057
+Node: Запуск guix copy532150
+Ref: Запуск guix copy-Footnote-1534245
+Node: Запуск guix container534354
+Node: Запуск guix weather536070
+Node: Запуск guix processes541583
+Ref: Запуск guix processes-Footnote-1544040
+Node: Конфигурирование системы544164
+Node: Использование системы конфигурации549169
+Node: Интерфейс operating-system566101
+Ref: Интерфейс operating-system-Footnote-1575925
+Node: Файловые системы576101
+Ref: Файловые системы-Footnote-1583467
+Ref: Файловые системы-Footnote-2583732
+Node: Btrfs file system584000
+Node: Размеченные устройства587891
+Ref: Размеченные устройства-Footnote-1592358
+Node: Учётные записи пользователей592724
+Ref: user-account-password595558
+Node: Раскладка клавиатуры598264
+Node: Региональные настройки608871
+Ref: Региональные настройки-Footnote-1614288
+Node: Службы614412
+Node: Базовые службы619843
+Ref: syslog-configuration-type637641
+Ref: syslog-service637981
+Ref: guix-configuration-type638440
+Ref: guix-publish-service-type646513
+Ref: rngd-service649096
+Ref: pam-limits-service649359
+Node: Запланированное исполнения задач650342
+Node: Ротация логов655639
+Node: Сервисы сети659566
+Node: Оконная система X708201
+Node: Сервисы печати722329
+Node: Сервисы рабочего стола754073
+Node: Звуковые сервисы772706
+Node: Сервисы баз данных777292
+Node: Почтовые сервисы782656
+Node: Сервисы сообщений848810
+Node: Сервисы телефонии869392
+Node: Сервисы мониторинга878106
+Node: Сервисы Kerberos891499
+Node: LDAP Services895739
+Node: Веб-сервисы916039
+Ref: nginx-location-configuration body932526
+Node: Сервисы сертификатов956148
+Node: Сервисы DNS964065
+Node: VPN-сервисы989974
+Node: Сетевые файловые системы999454
+Node: Длительная интеграция1005830
+Node: Сервисы управления питанием1010959
+Node: Сервисы аудио1025239
+Node: Сервисы виртуализации1029378
+Node: Сервисы упраления версиями1050468
+Ref: Сервисы упраления версиями-Footnote-11085798
+Node: Игровые службы1085889
+Node: Службы подключения PAM1086934
+Node: Guix Services1090551
+Node: Службы Linux1092646
+Node: Hurd Services1096376
+Node: Разнообразные службы1097740
+Node: Программы setuid1109154
+Node: Сертификаты X.5091111277
+Node: Служба выбора имён1114007
+Node: Начальный RAM-диск1119241
+Node: Настройка загрузчика1127259
+Node: Вызов guix system1135303
+Ref: guix system vm1144216
+Ref: system-extension-graph1154903
+Ref: system-shepherd-graph1155291
+Ref: Вызов guix system-Footnote-11155586
+Node: Запуск guix deploy1155732
+Node: Запуск Guix на виртуальной машине1163562
+Node: Создание служб1169304
+Node: Производство сервисов.1170165
+Node: Типы сервисов и сервисы1173054
+Node: Интерфейс сервиса1178135
+Node: Сервисы Shepherd1188619
+Node: Документация1194070
+Node: Установка файлов отладки1196012
+Node: Обновления безопасности1199180
+Node: Начальная загрузка1208973
+Node: Reduced Binary Seed Bootstrap1210658
+Ref: Reduced Binary Seed Bootstrap-Footnote-11214100
+Ref: Reduced Binary Seed Bootstrap-Footnote-21214260
+Ref: Reduced Binary Seed Bootstrap-Footnote-31214449
+Ref: Reduced Binary Seed Bootstrap-Footnote-41214547
+Node: Preparing to Use the Bootstrap Binaries1214679
+Ref: Preparing to Use the Bootstrap Binaries-Footnote-11223880
+Node: Портирование1224036
+Node: Содействие1226326
+Node: Сборка из Git1228743
+Node: Запуск Guix перед его устанвокой1234396
+Ref: Запуск Guix перед его устанвокой-Footnote-11237128
+Node: Совершенная установка1237311
+Node: Принципы опакечивания1242131
+Node: Свобода программного обеспечения1248535
+Node: Как называть пакеты1250413
+Node: Номера версий1252270
+Node: Краткие обзоры и описания1256644
+Node: Модули Python1262790
+Node: Модули Perl1267733
+Node: Пакеты Java1269005
+Node: Rust Crates1270270
+Node: Шрифты1272700
+Node: Стиль кодирования1275544
+Node: Парадигма программирования1276738
+Node: Модули1277329
+Node: Типы данных и поиск образцов1278148
+Node: Форматирование кода1279407
+Node: Отправка исправлений1282387
+Ref: Отправка пакета исправлений1296619
+Node: Отслеживание ошибок и патчей1297257
+Ref: Отслеживание ошибок и патчей-Footnote-11299511
+Node: Доступ к коммитам1299805
+Node: Благодарности1308935
+Node: Лицензия свободной документации GNU1310040
+Node: Термины и указатели1335511
+Node: Программный индекс1418302
+
+End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:

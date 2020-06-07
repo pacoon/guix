@@ -1,0 +1,42 @@
+diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
+index 7553f87e..8e865c6c 100644
+--- a/external/CMakeLists.txt
++++ b/external/CMakeLists.txt
+@@ -37,19 +37,7 @@
+ 
+ find_package(Miniupnpc REQUIRED)
+ 
+-message(STATUS "Using in-tree miniupnpc")
+-add_subdirectory(miniupnp/miniupnpc)
+-set_property(TARGET libminiupnpc-static PROPERTY FOLDER "external")
+-if(MSVC)
+-  set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -wd4244 -wd4267")
+-elseif(NOT MSVC)
+-  set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-undef -Wno-unused-result -Wno-unused-value")
+-endif()
+-if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+-	set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -D_NETBSD_SOURCE")
+-endif()
+-
+-set(UPNP_LIBRARIES "libminiupnpc-static" PARENT_SCOPE)
++set(UPNP_LIBRARIES "miniupnpc" PARENT_SCOPE)
+ 
+ find_package(Unbound)
+ 
+diff --git a/src/p2p/net_node.inl b/src/p2p/net_node.inl
+index 74924e4f..3554dd0d 100644
+--- a/src/p2p/net_node.inl
++++ b/src/p2p/net_node.inl
+@@ -49,9 +49,9 @@
+ #include "storages/levin_abstract_invoke2.h"
+ #include "cryptonote_core/cryptonote_core.h"
+ 
+-#include <miniupnp/miniupnpc/miniupnpc.h>
+-#include <miniupnp/miniupnpc/upnpcommands.h>
+-#include <miniupnp/miniupnpc/upnperrors.h>
++#include <miniupnpc/miniupnpc.h>
++#include <miniupnpc/upnpcommands.h>
++#include <miniupnpc/upnperrors.h>
+ 
+ #undef MONERO_DEFAULT_LOG_CATEGORY
+ #define MONERO_DEFAULT_LOG_CATEGORY "net.p2p"

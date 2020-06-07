@@ -1,0 +1,1308 @@
+@node Contribuer
+@chapter Contribuer
+
+Ce projet est un effort coopératif et nous avons besoin de votre aide pour
+le faire grandir ! Contactez-nous sur @email{guix-devel@@gnu.org} et
+@code{#guix} sur le réseau IRC Freenode.  Nous accueillons les idées, les
+rapports de bogues, les correctifs et tout ce qui pourrait aider le projet.
+Nous apprécions particulièrement toute aide sur la création de paquets
+(@pxref{Consignes d'empaquetage}).
+
+@cindex code de conduite, des contributeur·rices
+@cindex convention de contribution
+We want to provide a warm, friendly, and harassment-free environment, so
+that anyone can contribute to the best of their abilities.  To this end our
+project uses a ``Contributor Covenant'', which was adapted from
+@url{https://contributor-covenant.org/}.  You can find a local version in
+the @file{CODE-OF-CONDUCT} file in the source tree.
+
+Les contributeur·rice·s n'ont pas besoin d'utiliser leur nom légal dans
+leurs correctifs et leurs communications en ligne ; elles et ils peuvent
+utiliser n'importe quel nom ou pseudonyme de leur choix.
+
+@menu
+* Construire depuis Git::    Toujours le plus récent.
+* Lancer Guix avant qu'il ne soit installé::  Astuces pour les hackers.
+* La configuration parfaite::  Les bons outils.
+* Consignes d'empaquetage::  Faire grandir la distribution.
+* Style de code::            Hygiène des contributeur·rice·s.
+* Envoyer des correctifs::   Partager votre travail.
+* Tracking Bugs and Patches::  Using Debbugs.
+* Commit Access::            Pushing to the official repository.
+@end menu
+
+@node Construire depuis Git
+@section Construire depuis Git
+
+Si vous souhaitez travailler sur Guix lui-même, il est recommandé d'utiliser
+la dernière version du dépôt Git :
+
+@example
+git clone https://git.savannah.gnu.org/git/guix.git
+@end example
+
+@cindex authentication, of a Guix checkout
+How do you ensure that you obtained a genuine copy of the repository? Guix
+itself provides a tool to @dfn{authenticate} your checkout, but you must
+first make sure this tool is genuine in order to ``bootstrap'' the trust
+chain.  To do that, run:
+
+@c ===========================================================================
+@c
+@c This file was generated with po4a. Translate the source file.
+@c
+@c ===========================================================================
+@c XXX: Adjust instructions when there's a known tag to start from.
+@example
+git verify-commit `git log --format=%H build-aux/git-authenticate.scm`
+@end example
+
+The output must look something like:
+
+@example
+gpg: Signature made Fri 27 Dec 2019 01:27:41 PM CET
+gpg:                using RSA key 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
+@dots{}
+gpg: Signature made Fri 27 Dec 2019 01:25:22 PM CET
+gpg:                using RSA key 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
+@dots{}
+@end example
+
+@noindent
+... meaning that changes to this file are all signed with key
+@code{3CE464558A84FDC69DB40CFB090B11993D9AEBB5} (you may need to fetch this
+key from a key server, if you have not done it yet).
+
+From there on, you can authenticate all the commits included in your
+checkout by running:
+
+@example
+make authenticate
+@end example
+
+The first run takes a couple of minutes, but subsequent runs are faster.
+
+@quotation Remarque
+You are advised to run @command{make authenticate} after every @command{git
+pull} invocation.  This ensures you keep receiving valid changes to the
+repository
+@end quotation
+
+La manière la plus simple de configurer un environnement de développement
+pour Guix est, bien sûr, d'utiliser Guix ! La commande suivante démarre un
+nouveau shell où toutes les dépendances et les variables d'environnements
+appropriées sont configurés pour travailler sur Guix :
+
+@example
+guix environment guix --pure
+@end example
+
+@xref{Invoquer guix environment}, for more information on that command.
+
+If you are unable to use Guix when building Guix from a checkout, the
+following are the required packages in addition to those mentioned in the
+installation instructions (@pxref{Prérequis}).
+
+@itemize
+@item @url{https://gnu.org/software/autoconf/, GNU Autoconf};
+@item @url{https://gnu.org/software/automake/, GNU Automake};
+@item @url{https://gnu.org/software/gettext/, GNU Gettext};
+@item @url{https://gnu.org/software/texinfo/, GNU Texinfo};
+@item @url{https://www.graphviz.org/, Graphviz};
+@item @url{https://www.gnu.org/software/help2man/, GNU Help2man (optional)}.
+@end itemize
+
+On Guix, extra dependencies can be added by instead running @command{guix
+environment} with @option{--ad-hoc}:
+
+@example
+guix environment guix --pure --ad-hoc help2man git strace
+@end example
+
+Lancez @command{./bootstrap} pour générer l'infrastructure du système de
+construction avec Autoconf et Automake.  Si vous avez une erreur comme :
+
+@example
+configure.ac:46: error: possibly undefined macro: PKG_CHECK_MODULES
+@end example
+
+@noindent
+cela signifie probablement qu'Autoconf n'a pas pu trouver @file{pkg.m4} qui
+est fournit par pkg-config.  Assurez-vous que @file{pkg.m4} est disponible.
+C'est aussi vrai pour l'ensemble de macros de @file{guile.m4} fournies par
+Guile.  Par exemple, si vous avez installé Automake dans @file{/usr/local},
+il ne cherchera pas les fichiers @file{.m4} dans @file{/usr/share}.  Dans ce
+case vous devez invoquer la commande suivante :
+
+@example
+export ACLOCAL_PATH=/usr/share/aclocal
+@end example
+
+@xref{Macro Search Path,,, automake, The GNU Automake Manual}, pour plus
+d'information.
+
+Then, run @command{./configure} as usual.  Make sure to pass
+@code{--localstatedir=@var{directory}} where @var{directory} is the
+@code{localstatedir} value used by your current installation (@pxref{Le dépôt}, for information about this).  We recommend to use the value
+@code{/var}.
+
+Finalement, vous devez invoquer @code{make check} pour lancer les tests
+(@pxref{Lancer la suite de tests}).  Si quelque chose échoue, jetez un œil
+aux instructions d'installation (@pxref{Installation}) ou envoyez un message
+à la liste @email{guix-devel@@gnu.org}.
+
+
+@node Lancer Guix avant qu'il ne soit installé
+@section Lancer Guix avant qu'il ne soit installé
+
+Pour garder un environnement de travail sain, il est utile de tester les
+changement localement sans les installer pour de vrai.  Pour pouvoir
+distinguer votre rôle « d'utilisateur·rice final·e » de celui parfois haut
+en couleur de « développeur·euse ».
+
+To that end, all the command-line tools can be used even if you have not run
+@code{make install}.  To do that, you first need to have an environment with
+all the dependencies available (@pxref{Construire depuis Git}), and then simply
+prefix each command with @command{./pre-inst-env} (the @file{pre-inst-env}
+script lives in the top build tree of Guix; it is generated by
+@command{./configure}).  An example@footnote{The @option{-E} flag to
+@command{sudo} guarantees that @code{GUILE_LOAD_PATH} is correctly set such
+that @command{guix-daemon} and the tools it uses can find the Guile modules
+they need.}:
+
+@example
+$ sudo -E ./pre-inst-env guix-daemon --build-users-group=guixbuild
+$ ./pre-inst-env guix build hello
+@end example
+
+@noindent
+Similarly, an example for a Guile session using the Guix modules:
+
+@example
+$ ./pre-inst-env guile -c '(use-modules (guix utils)) (pk (%current-system))'
+
+;;; ("x86_64-linux")
+@end example
+
+@noindent
+@cindex REPL
+@cindex read-eval-print loop
+@dots{} et pour un REPL (@pxref{Using Guile Interactively,,, guile, Guile
+Reference Manual})
+
+@example
+$ ./pre-inst-env guile
+scheme@@(guile-user)> ,use(guix)
+scheme@@(guile-user)> ,use(gnu)
+scheme@@(guile-user)> (define snakes
+                       (fold-packages
+                         (lambda (package lst)
+                           (if (string-prefix? "python"
+                                               (package-name package))
+                               (cons package lst)
+                               lst))
+                         '()))
+scheme@@(guile-user)> (length snakes)
+$1 = 361
+@end example
+
+Le script @command{pre-inst-env} paramètre toutes les variables
+d'environnement nécessaires, dont @env{PATH} et @env{GUILE_LOAD_PATH}.
+
+Remarquez que @command{./pre-inst-env guix pull} ne met @emph{pas} à jour
+l'arborescence des sources locale ; cela met seulement à jour le lien
+symbolique de @file{~/.config/guix/current} (@pxref{Invoquer guix pull}).
+Lancez @command{git pull} à la place si vous voulez mettre à jour votre
+arborescence des source locale.
+
+
+@node La configuration parfaite
+@section La configuration parfaite
+
+The Perfect Setup to hack on Guix is basically the perfect setup used for
+Guile hacking (@pxref{Using Guile in Emacs,,, guile, Guile Reference
+Manual}).  First, you need more than an editor, you need
+@url{https://www.gnu.org/software/emacs, Emacs}, empowered by the wonderful
+@url{https://nongnu.org/geiser/, Geiser}.  To set that up, run:
+
+@example
+guix package -i emacs guile emacs-geiser
+@end example
+
+Geiser permet le développement interactif et incrémental depuis Emacs : la
+compilation du code et son évaluation depuis les buffers, l'accès à la
+documentation en ligne (docstrings), la complétion sensible au contexte,
+@kbd{M-.} pour sauter à la définition d'un objet, un REPL pour tester votre
+code, et bien plus (@pxref{Introduction,,, geiser, Geiser User Manual}).
+Pour travailler confortablement sur Guix, assurez-vous de modifier le chemin
+de chargement de Guile pour qu'il trouve les fichiers source de votre dépôt
+:
+
+@lisp
+;; @r{Si l'extrait est dans ~/src/guix.}
+(with-eval-after-load 'geiser-guile
+  (add-to-list 'geiser-guile-load-path "~/src/guix"))
+@end lisp
+
+To actually edit the code, Emacs already has a neat Scheme mode.  But in
+addition to that, you must not miss
+@url{https://www.emacswiki.org/emacs/ParEdit, Paredit}.  It provides
+facilities to directly operate on the syntax tree, such as raising an
+s-expression or wrapping it, swallowing or rejecting the following
+s-expression, etc.
+
+@cindex extraits de code
+@cindex modèles
+@cindex réduire la quantité de code commun
+We also provide templates for common git commit messages and package
+definitions in the @file{etc/snippets} directory.  These templates can be
+used with @url{https://joaotavora.github.io/yasnippet/, YASnippet} to expand
+short trigger strings to interactive text snippets.  You may want to add the
+snippets directory to the @var{yas-snippet-dirs} variable in Emacs.
+
+@lisp
+;; @r{Si l'extrait est dans ~/src/guix.}
+(with-eval-after-load 'yasnippet
+  (add-to-list 'yas-snippet-dirs "~/src/guix/etc/snippets"))
+@end lisp
+
+Les extraits de messages de commit dépendent de @url{https://magit.vc/,
+Magit} pour afficher les fichiers sélectionnés.  Lors de la modification
+d'un message de commit, tapez @code{add} suivi de @kbd{TAB} pour insérer un
+modèle de message de commit pour ajouter un paquet ; tapez @code{update}
+suivi de @kbd{TAB} pour insérer un modèle pour la mise à jour d'un paquet ;
+tapez @code{https} suivi de @kbd{TAB} pour insérer un modèle pour le
+changement à HTTPS de l'URI de la page d'accueil.
+
+L'extrait principal pour @code{scheme-mode} est lancé en tapant
+@code{package…} suivi par @kbd{TAB}.  Cet extrait insère aussi la chaîne de
+déclenchement @code{origin…}, qui peut aussi être étendue.  L'extrait
+@code{origin} lui-même peut aussi insérer des chaînes de déclenchement qui
+finissent sur @code{…}, qui peuvent aussi être étendues.
+
+@cindex insert or update copyright
+@cindex @code{M-x guix-copyright}
+@cindex @code{M-x copyright-update}
+Additionaly we provide insertion and automatic update of a copyright in
+@file{etc/copyright.el}.  You may want to set your full name, mail, and load
+a file.
+
+@lisp
+(setq user-full-name "Alice Doe")
+(setq user-mail-address "alice@@mail.org")
+;; @r{Assuming the Guix checkout is in ~/src/guix.}
+(load-file "~/src/guix/etc/copyright.el")
+@end lisp
+
+To insert a copyright at the current line invoke @code{M-x guix-copyright}.
+
+To update a copyright you need to specify a @code{copyright-names-regexp}.
+
+@lisp
+(setq copyright-names-regexp
+      (format "%s <%s>" user-full-name user-mail-address))
+@end lisp
+
+You can check if your copyright is up to date by evaluating @code{M-x
+copyright-update}.  If you want to do it automatically after each buffer
+save then add @code{(add-hook 'after-save-hook 'copyright-update)} in Emacs.
+
+@node Consignes d'empaquetage
+@section Consignes d'empaquetage
+
+@cindex paquets, création
+La distribution GNU est jeune et vos paquets préférés peuvent manquer.
+Cette section décrit comment vous pouvez aider à agrandir la distribution.
+
+Les paquets de logiciels libres sont habituellement distribués sous forme
+@dfn{d'archives de sources} — typiquement des fichiers @file{.tar.gz}
+contenant tous les fichiers sources.  Ajouter un paquet à la distribution
+signifie essentiellement deux choses : ajouter une @dfn{recette} qui décrit
+comment construire le paquet, avec une liste d'autres paquets requis pour le
+construire, et ajouter des @dfn{métadonnées de paquet} avec la recette,
+comme une description et une licence.
+
+Dans Guix, toutes ces informations sont incorporées dans les
+@dfn{définitions de paquets}.  Les définitions de paquets fournissent une
+vue de haut-niveau du paquet.  Elles sont écrites avec la syntaxe du langage
+de programmation Scheme ; en fait, pour chaque paquet nous définissons une
+variable liée à la définition et exportons cette variable à partir d'un
+module (@pxref{Modules de paquets}).  Cependant, il n'est @emph{pas} nécessaire
+d'avoir une connaissance approfondie du Scheme pour créer des paquets.  Pour
+plus d'informations sur les définitions des paquets, @pxref{Définition des paquets}.
+
+Une fois une définition de paquet en place, stocké dans un fichier de
+l'arborescence des sources de Guix, il peut être testé avec la commande
+@command{guix build} (@pxref{Invoquer guix build}).  Par exemple, en
+supposant que le nouveau paquet s'appelle @code{gnew}, vous pouvez lancer
+cette commande depuis l'arborescence de construction de Guix (@pxref{Lancer Guix avant qu'il ne soit installé}) :
+
+@example
+./pre-inst-env guix build gnew --keep-failed
+@end example
+
+Utiliser @code{--keep-failed} rend facile le débogage des échecs car il
+fournit l'accès à l'arborescence de construction qui a échouée.  Une autre
+sous-commande utile pour le débogage est @code{--log-file}, pour accéder au
+journal de construction.
+
+Si le paquet n'est pas connu de la commande @command{guix}, il se peut que
+le fichier source ait une erreur de syntaxe, ou qu'il manque une clause
+@code{define-public} pour exporter la variable du paquet.  Pour comprendre
+cela, vous pouvez charger le module depuis Guile pour avoir plus
+d'informations sur la véritable erreur :
+
+@example
+./pre-inst-env guile -c '(use-modules (gnu packages gnew))'
+@end example
+
+Once your package builds correctly, please send us a patch
+(@pxref{Envoyer des correctifs}).  Well, if you need help, we will be happy to
+help you too.  Once the patch is committed in the Guix repository, the new
+package automatically gets built on the supported platforms by
+@url{@value{SUBSTITUTE-SERVER}, our continuous integration system}.
+
+@cindex substitution
+On peut obtenir la nouvelle définition du paquet simplement en lançant
+@command{guix pull} (@pxref{Invoquer guix pull}). Lorsque
+@code{@value{SUBSTITUTE-SERVER}} a fini de construire le paquet,
+l'installation du paquet y télécharge automatiquement les binaires
+(@pxref{Substituts}). La seule intervention humaine requise est pendant la
+revue et l'application du correctif.
+
+
+@menu
+* Liberté logiciel::        Ce que la distribution peut contenir.
+* Conventions de nommage::   Qu'est-ce qu'un bon nom ?
+* Numéros de version::      Lorsque le nom n'est pas suffisant.
+* Synopsis et descriptions::  Aider les utilisateur·rice·s à trouver le 
+                                bon paquet.
+* Modules python::           Un peu de comédie anglaise.
+* Modules perl::             Petites perles.
+* Paquets java::             Pause café.
+* Rust Crates::              Beware of oxidation.
+* Polices de caractères::   À fond les fontes.
+@end menu
+
+@node Liberté logiciel
+@subsection Liberté logiciel
+
+@c Adapted from http://www.gnu.org/philosophy/philosophy.html.
+@cindex logiciel libre
+The GNU operating system has been developed so that users can have freedom
+in their computing.  GNU is @dfn{free software}, meaning that users have the
+@url{https://www.gnu.org/philosophy/free-sw.html,four essential freedoms}:
+to run the program, to study and change the program in source code form, to
+redistribute exact copies, and to distribute modified versions.  Packages
+found in the GNU distribution provide only software that conveys these four
+freedoms.
+
+In addition, the GNU distribution follow the
+@url{https://www.gnu.org/distros/free-system-distribution-guidelines.html,free
+software distribution guidelines}.  Among other things, these guidelines
+reject non-free firmware, recommendations of non-free software, and discuss
+ways to deal with trademarks and patents.
+
+Certaines sources amont autrement parfaitement libres contiennent une petite
+partie facultative qui viole les recommandations ci-dessus, par exemple car
+cette partie est du code non-libre.  Lorsque cela arrive, les éléments en
+question sont supprimés avec des correctifs ou des bouts de codes appropriés
+dans la forme @code{origin} du paquet (@pxref{Définition des paquets}).  De cette
+manière, @code{guix build --source} renvoie la source « libérée » plutôt que
+la source amont sans modification.
+
+
+@node Conventions de nommage
+@subsection Conventions de nommage
+
+@cindex nom du paquet
+Un paquet a en fait deux noms qui lui sont associés : d'abord il y a le nom
+de la @emph{variable Scheme}, celui qui suit @code{define-public}.  Par ce
+nom, le paquet peut se faire connaître par le code Scheme, par exemple comme
+entrée d'un autre paquet.  Deuxièmement, il y a la chaîne dans le champ
+@code{name} d'une définition de paquet.  Ce nom est utilisé par les
+commandes de gestion des paquets comme @command{guix package} et
+@command{guix build}.
+
+Les deux sont habituellement les mêmes et correspondent à la conversion en
+minuscule du nom du projet choisi en amont, où les underscores sont
+remplacés par des tirets.  Par exemple, GNUnet est disponible en tant que
+@code{gnunet} et SDL_net en tant que @code{sdl-net}.
+
+Nous n'ajoutons pas de préfixe @code{lib} au bibliothèques de paquets, à
+moins qu'il ne fasse partie du nom officiel du projet.  Mais @pxref{Modules python} et @ref{Modules perl}  pour des règles spéciales concernant les
+modules pour les langages Python et Perl.
+
+Les noms de paquets de polices sont gérés différemment, @pxref{Polices de caractères}.
+
+
+@node Numéros de version
+@subsection Numéros de version
+
+@cindex version du paquet
+Nous n'incluons en général que la dernière version d'un projet de logiciel
+libre donné.  Mais parfois, par exemple pour des versions incompatibles de
+bibliothèques, deux (ou plus) versions du même paquet sont requises.  Elles
+ont besoin d'un nom de variable Scheme différent.  Nous utilisons le nom
+défini dans @ref{Conventions de nommage} pour la version la plus récente ; les
+versions précédentes utilisent le même nom, suffixé par @code{-} et le plus
+petit préfixe du numéro de version qui permet de distinguer deux versions.
+
+Le nom dans la définition du paquet est le même pour toutes les versions
+d'un paquet et ne contient pas de numéro de version.
+
+Par exemple, les version 2.24.20 et 3.9.12 de GTK+ peuvent être inclus de
+cette manière :
+
+@lisp
+(define-public gtk+
+  (package
+    (name "gtk+")
+    (version "3.9.12")
+    ...))
+(define-public gtk+-2
+  (package
+    (name "gtk+")
+    (version "2.24.20")
+    ...))
+@end lisp
+Si nous voulons aussi GTK+ 3.8.2, cela serait inclus de cette manière :
+@lisp
+(define-public gtk+-3.8
+  (package
+    (name "gtk+")
+    (version "3.8.2")
+    ...))
+@end lisp
+
+@c See <https://lists.gnu.org/archive/html/guix-devel/2016-01/msg00425.html>,
+@c for a discussion of what follows.
+@cindex numéro de version, pour les instantanés des systèmes de contrôle de version
+Parfois, nous incluons des paquets provenant d'instantanés de systèmes de
+contrôle de version (VCS) au lieu de versions publiées formellement.  Cela
+devrait rester exceptionnel, car c'est le rôle des développeurs amont de
+spécifier quel est la version stable.  Cependant, c'est parfois nécessaire.
+Donc, que faut-il mettre dans le champ @code{version} ?
+
+Clairement, nous devons rendre l'identifiant de commit de l'instantané du
+VCS visible dans la version, mais nous devons aussi nous assurer que la
+version augmente de manière monotone pour que @command{guix package
+--upgrade} puisse déterminer quelle version est la plus récente.  Comme les
+identifiants de commits, notamment avec Git, n'augmentent pas, nous ajoutons
+un numéro de révision qui nous augmentons à chaque fois que nous mettons à
+jour vers un nouvel instantané.  La chaîne qui en résulte ressemble à cela :
+
+@example
+2.0.11-3.cabba9e
+  ^    ^    ^
+  |    |    `-- ID du commit en amont
+  |    |
+  |    `--- révision du paquet Guix
+  |
+dernière version en amont
+@end example
+
+It is a good idea to strip commit identifiers in the @code{version} field
+to, say, 7 digits.  It avoids an aesthetic annoyance (assuming aesthetics
+have a role to play here) as well as problems related to OS limits such as
+the maximum shebang length (127 bytes for the Linux kernel).  It is best to
+use the full commit identifiers in @code{origin}s, though, to avoid
+ambiguities.  A typical package definition may look like this:
+
+@lisp
+(define my-package
+  (let ((commit "c3f29bc928d5900971f65965feaae59e1272a3f7")
+        (revision "1"))          ;révision du paquet Guix
+    (package
+      (version (git-version "0.9" revision commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "git://example.org/my-package.git")
+                      (commit commit)))
+                (sha256 (base32 "1mbikn@dots{}"))
+                (file-name (git-file-name name version))))
+      ;; @dots{}
+      )))
+@end lisp
+
+@node Synopsis et descriptions
+@subsection Synopsis et descriptions
+
+@cindex description du paquet
+@cindex résumé du paquet
+Comme nous l'avons vu avant, chaque paquet dans GNU@tie{}Guix contient un
+résumé et une description (@pxref{Définition des paquets}).  Les résumés et les
+descriptions sont importants : ce sont eux que recherche @command{guix
+package --search}, et c'est une source d'informations cruciale pour aider
+les utilisateur·rice·s à déterminer si un paquet donné correspond à leurs
+besoins.  En conséquence, il convient de prêter attention à leur contenu
+lorsqu'on travaille sur un paquet.
+
+Les résumés doivent commencer par une lettre capitale et ne doit pas finir
+par un point.  Ils ne doivent pas commencer par « a » ou « the » (« un » ou
+« le/la »), ce qui n'apporte généralement rien ; par exemple, préférez «
+File-frobbing tool » (« Outil de frobage de fichier ») à « A tool that frobs
+file » (« Un outil qui frobe les fichiers »).  Le résumé devrait dire ce que
+le paquet est — p.@: ex.@: « Utilitaire du cœur de GNU (fichier, text,
+shell) » — ou ce à quoi il sert — p.@: ex.@: le résumé de grep est « Affiche
+des lignes correspondant à un motif ».
+
+Gardez à l'esprit que le résumé doit avoir un sens pour une large audience.
+Par exemple « Manipulation d'alignements au format SAM » peut avoir du sens
+pour un bioinformaticien chevronné, mais n'aidera pas ou pourra perdre une
+audience de non-spécialistes.  C'est une bonne idée de créer un résumé qui
+donne une idée du domaine d'application du paquet.  Dans cet exemple, cela
+donnerait « Manipulation d'alignements de séquences de nucléotides », ce qui
+devrait donner une meilleure idée à la personne qui le lit pour savoir si
+c'est ce qu'elle recherche.
+
+Les descriptions devraient faire entre cinq et dix lignes.  Utilisez des
+phrases complètes, et évitez d'utiliser des acronymes sans les introduire
+d'abord.  Évitez les phrases marketings comme « world-leading », «
+industrial-strength » et « next-generation » et évitez les superlatifs comme
+« the most advanced » — ils ne sont pas utiles aux personnes qui cherchent
+un paquet et semblent même un peu suspects.  À la place, essayez d'être
+factuels, en mentionnant les cas d'utilisation et les fonctionnalités.
+
+@cindex balisage texinfo, dans les descriptions de paquets
+Les descriptions peuvent inclure du balisage Texinfo, ce qui est utile pour
+introduire des ornements comme @code{@@code} ou @code{@@dfn}, des listes à
+points ou des hyperliens (@pxref{Overview,,, texinfo, GNU Texinfo}).
+Cependant soyez prudents lorsque vous utilisez certains symboles, par
+exemple @samp{@@} et les accolades qui sont les caractères spéciaux de base
+en Texinfo (@pxref{Special Characters,,, texinfo, GNU Texinfo}).  Les
+commandes et outils comme @command{guix package --show} prennent en charge
+le rendu.
+
+Synopses and descriptions are translated by volunteers
+@uref{https://translationproject.org/domain/guix-packages.html, at the
+Translation Project} so that as many users as possible can read them in
+their native language.  User interfaces search them and display them in the
+language specified by the current locale.
+
+Pour permettre à @command{xgettext} de les extraire comme des chaînes
+traduisibles, les résumés et les descriptions @emph{doivent être des chaînes
+litérales}.  Cela signifie que vous ne pouvez pas utiliser
+@code{string-append} ou @code{format} pour construire ces chaînes :
+
+@lisp
+(package
+  ;; @dots{}
+  (synopsis "Ceci est traduisible")
+  (description (string-append "Ceci n'est " "*pas*" " traduisible.")))
+@end lisp
+
+La traduction demande beaucoup de travail, faites donc d'autant plus
+attention à vos résumés et descriptions lorsque vous développez un paquet
+car chaque changement peut demander du de travail de la part des
+traducteur·rice·s.  Pour les aider, il est possible de donner des
+recommandations ou des instructions qu'ils et elles pourront voir en
+insérant des commentaires spéciaux comme ceci (@pxref{xgettext Invocation,,,
+gettext, GNU Gettext}) :
+
+@example
+;; TRANSLATORS: "X11 resize-and-rotate" should not be translated.
+(description "ARandR is designed to provide a simple visual front end
+for the X11 resize-and-rotate (RandR) extension. @dots{}")
+@end example
+
+
+@node Modules python
+@subsection Modules python
+
+@cindex python
+Nous incluons actuellement Python 2 et Python 3, sous les noms de variables
+Scheme @code{python-2} et @code{python} comme expliqué dans @ref{Numéros de version}.  Pour éviter la confusion et les problèmes de noms avec d'autres
+langages de programmation, il semble désirable que le nom d'un paquet pour
+un module Python contienne le mot @code{python}.
+
+Some modules are compatible with only one version of Python, others with
+both.  If the package Foo is compiled with Python 3, we name it
+@code{python-foo}.  If it is compiled with Python 2, we name it
+@code{python2-foo}.  Packages should be added when they are necessary; we
+don't add Python 2 variants of the package unless we are going to use them.
+
+Si un projet contient déjà le mot @code{python}, on l'enlève, par exemple le
+module python-dateutil est packagé sous les noms @code{python-dateutil} et
+@code{python2-dateutil}.  Si le nom du projet commence par @code{py} (p.@:
+ex.@: @code{pytz}), on le garde et on le préfixe comme décrit ci-dessus.
+
+@subsubsection Spécifier les dépendances
+@cindex entrées, pour les paquets Python
+
+Les informations de dépendances pour les paquets Python se trouvent
+généralement dans l'arborescence des source du paquet, avec plus ou moins de
+précision : dans le fichier @file{setup.py}, dans @file{requirements.txt} ou
+dans @file{tox.ini}.
+
+Votre mission, lorsque vous écrivez une recette pour un paquet Python, est
+de faire correspondre ces dépendances au bon type « d'entrée »
+(@pxref{Référence des paquets, inputs}).  Bien que l'importeur @code{pypi} fasse
+du bon boulot (@pxref{Invoquer guix import}), vous devriez vérifier la liste
+suivant pour déterminer où va telle dépendance.
+
+@itemize
+
+@item
+Nous empaquetons Python 2 avec @code{setuptools} et @code{pip} installé
+comme Python 3.4 par défaut.  Ainsi, vous n'avez pas à spécifié ces
+entrées.  @command{guix lint} vous avertira si vous faîtes cela.
+
+@item
+Les dépendances Python requises à l'exécutions vont dans
+@code{propagated-inputs}.  Elles sont typiquement définies dans le mot-clef
+@code{install_requires} dans @file{setup.py} ou dans le fichier
+@file{requirements.txt}.
+
+@item
+Les paquets Python requis uniquement à la construction — p.@: ex.@: ceux
+listés dans le mot-clef @code{setup_requires} de @file{setup.py} — ou
+seulement pour les tests — p.@: ex.@: ceux dans @code{tests_require} — vont
+dans @code{native-inputs}.  La raison est qu'ils n'ont pas besoin d'être
+propagés car ils ne sont pas requis à l'exécution et dans le cas d'une
+compilation croisée, c'est l'entrée « native » qu'il nous faut.
+
+Les cadriciels de tests @code{pytest}, @code{mock} et @code{nose} sont des
+exemples.  Bien sûr si l'un de ces paquets est aussi requis à l'exécution,
+il doit aller dans @code{propagated-inputs}.
+
+@item
+Tout ce qui ne tombe pas dans les catégories précédentes va dans
+@code{inputs}, par exemple des programmes pour des bibliothèques C requises
+pour construire des paquets Python avec des extensions C.
+
+@item
+Si un paquet Python a des dépendances facultatives (@code{extras_require}),
+c'est à vous de décider de les ajouter ou non, en fonction du ratio entre
+utilité et complexité (@pxref{Envoyer des correctifs, @command{guix size}}).
+
+@end itemize
+
+
+@node Modules perl
+@subsection Modules perl
+
+@cindex perl
+Les programmes Perl utiles en soit sont nommés comme les autres paquets,
+avec le nom amont en minuscule.  Pour les paquets Perl contenant une seule
+classe, nous utilisons le nom de la classe en minuscule, en remplaçant les
+occurrences de @code{::} par des tirets et en préfixant le tout par
+@code{perl-}.  Donc la classe @code{XML::Parser} devient
+@code{perl-xml-parser}.  Les modules contenant plusieurs classes gardent
+leur nom amont en minuscule et sont aussi préfixés par @code{perl-}.  Ces
+modules tendent à avoir le mot @code{perl} quelque part dans leur nom, que
+nous supprimons en faveur du préfixe.  Par exemple, @code{libwww-perl}
+devient @code{perl-libwww}.
+
+
+@node Paquets java
+@subsection Paquets java
+
+@cindex java
+Le programmes Java utiles en soit sont nommés comme les autres paquets, avec
+le nom amont en minuscule.
+
+Pour éviter les confusions et les problèmes de nom avec d'autres langages de
+programmation, il est désirable que le nom d'un paquet Java soit préfixé par
+@code{java-}.  Si un projet contient déjà le mot @code{java}, nous le
+supprimons, par exemple le paquet @code{ngsjava} est empaqueté sous le nom
+@code{java-ngs}.
+
+Pour les paquets java contenant une seul classe ou une petite hiérarchie de
+classes, nous utilisons le nom de la classe en minuscule, en remplaçant les
+occurrences de @code{.} par des tirets et en préfixant le tout par
+@code{java-}.  Donc la classe @code{apache.commons.cli} devient
+@code{java-apache-commons-cli}.
+
+
+@node Rust Crates
+@subsection Rust Crates
+
+@cindex rust
+Rust programs standing for themselves are named as any other package, using
+the lowercase upstream name.
+
+To prevent namespace collisions we prefix all other Rust packages with the
+@code{rust-} prefix.  The name should be changed to lowercase as appropriate
+and dashes should remain in place.
+
+In the rust ecosystem it is common for multiple incompatible versions of a
+package to be used at any given time, so all packages should have a
+versioned suffix.  If a package has passed version 1.0.0 then just the major
+version number is sufficient (e.g.@: @code{rust-clap-2}), otherwise the
+version suffix should contain both the major and minor version (e.g.@:
+@code{rust-rand-0.6}).
+
+Because of the difficulty in reusing rust packages as pre-compiled inputs
+for other packages the Cargo build system (@pxref{Systèmes de construction,
+@code{cargo-build-system}}) presents the @code{#:cargo-inputs} and
+@code{cargo-development-inputs} keywords as build system arguments.  It
+would be helpful to think of these as similar to @code{propagated-inputs}
+and @code{native-inputs}.  Rust @code{dependencies} and
+@code{build-dependencies} should go in @code{#:cargo-inputs}, and
+@code{dev-dependencies} should go in @code{#:cargo-development-inputs}.  If
+a Rust package links to other libraries then the standard placement in
+@code{inputs} and the like should be used.
+
+Care should be taken to ensure the correct version of dependencies are used;
+to this end we try to refrain from skipping the tests or using
+@code{#:skip-build?} when possible.  Of course this is not always possible,
+as the package may be developed for a different Operating System, depend on
+features from the Nightly Rust compiler, or the test suite may have
+atrophied since it was released.
+
+
+@node Polices de caractères
+@subsection Polices de caractères
+
+@cindex polices
+Pour les polices qui ne sont en général pas installées pour être utilisées
+pour du traitement de texte, ou qui sont distribuées en tant que partie d'un
+paquet logiciel plus gros, nous nous appuyons sur les règles générales pour
+les logiciels ; par exemple, cela s'applique aux polices livrées avec le
+système X.Org ou les polices qui font partie de TeX Live.
+
+Pour rendre plus facile la recherche par l'utilisatrice ou l'utilisateur,
+les noms des autres paquets contenant seulement des polices sont construits
+ainsi, indépendamment du nom du paquet en amont.
+
+Le nom d'un paquet contenant une unique famille de polices commence par
+@code{font-} ; il est suivi du nom du fondeur et d'un tiret @code{-} si le
+fondeur est connu, et du nom de la police, dont les espaces sont remplacés
+par des tirets (et comme d'habitude, toutes les lettres majuscules sont
+transformées en minuscules).  Par exemple, la famille de polices Gentium de
+SIL est empaqueté sous le nom @code{font-sil-gentium}.
+
+Pour un paquet contenant plusieurs familles de polices, le nom de la
+collection est utilisée à la place du nom de la famille.  Par exemple les
+polices Liberation consistent en trois familles, Liberation Sans, Liberation
+Serif et Liberation Mono.  Elles pourraient être empaquetées séparément sous
+les noms @code{font-liberation-sans} etc, mais comme elles sont distribuées
+ensemble sous un nom commun, nous préférons les empaqueter ensemble en tant
+que @code{font-liberation}.
+
+Dans le cas où plusieurs formats de la même famille ou collection sont
+empaquetés séparément, une forme courte du format, préfixé d'un tiret est
+ajouté au nom du paquet.  Nous utilisont @code{-ttf} pour les polices
+TrueType, @code{-otf} pour les polices OpenType et @code{-type1} pour les
+polices Type 1 de PostScript.
+
+
+@node Style de code
+@section Style de code
+
+En général notre code suit le Standard de Code GNU (@pxref{Top,,, standards,
+GNU Coding Standards}).  Cependant, il ne parle pas beaucoup de Scheme, donc
+voici quelques règles supplémentaires.
+
+@menu
+* Paradigme de programmation::  Comment composer vos éléments.
+* Modules::                  Où stocker votre code ?
+* Types de données et reconnaissance de motif::  Implémenter des 
+                                                    structures de données.
+* Formatage du code::        Conventions d'écriture.
+@end menu
+
+@node Paradigme de programmation
+@subsection Paradigme de programmation
+
+Le code Scheme dans Guix est écrit dans un style purement fonctionnel.  Le
+code qui s'occupe des entrées-sorties est une exception ainsi que les
+procédures qui implémentent des concepts bas-niveau comme la procédure
+@code{memoize}.
+
+@node Modules
+@subsection Modules
+
+Les modules Guile qui sont sensés être utilisés du côté de la construction
+doivent se trouver dans l'espace de nom @code{(guix build @dots{})}.  Ils ne
+doivent pas se référer à d'autres modules Guix ou GNU@.  Cependant il est
+correct pour un module « côté hôte » de dépendre d'un module coté
+construction.
+
+Les modules qui s'occupent du système GNU général devraient se trouver dans
+l'espace de nom @code{(gnu @dots{})} plutôt que @code{(guix @dots{})}.
+
+@node Types de données et reconnaissance de motif
+@subsection Types de données et reconnaissance de motif
+
+La tendance en Lisp classique est d'utiliser des listes pour tout
+représenter et de naviguer dedans « à la main ( avec @code{car}, @code{cdr},
+@code{cadr} et compagnie.  Il y a plusieurs problèmes avec ce style,
+notamment le fait qu'il soit dur à lire, source d'erreur et un obstacle aux
+rapports d'erreur bien typés.
+
+Le code de Guix devrait définir des types de données appropriées (par
+exemple, avec @code{define-record-type*}) plutôt que d'abuser des listes.
+En plus, il devrait utiliser la recherche de motifs, via le module Guile
+@code{(ice-9 match)}, surtout pour rechercher dans des listes.
+
+@node Formatage du code
+@subsection Formatage du code
+
+@cindex formater le code
+@cindex style de code
+When writing Scheme code, we follow common wisdom among Scheme programmers.
+In general, we follow the
+@url{https://mumble.net/~campbell/scheme/style.txt, Riastradh's Lisp Style
+Rules}.  This document happens to describe the conventions mostly used in
+Guile’s code too.  It is very thoughtful and well written, so please do read
+it.
+
+Certaines formes spéciales introduites dans Guix comme la macro
+@code{substitute*} ont des règles d'indentation spécifiques.  Elles sont
+définies dans le fichier @file{.dir-locals.el} qu'Emacs utilise
+automatiquement.  Remarquez aussi qu'Emacs-Guix fournit le mode
+@code{guix-devel-mode} qui indente et colore le code Guix correctement
+(@pxref{Développement,,, emacs-guix, The Emacs-Guix Reference Manual}).
+
+@cindex indentation, du code
+@cindex formatage, du code
+Si vous n'utilisez pas Emacs, assurez-vous que votre éditeur connaisse ces
+règles.  Pour indenter automatiquement une définition de paquet, vous pouvez
+aussi lancer :
+
+@example
+./etc/indent-code.el gnu/packages/@var{file}.scm @var{package}
+@end example
+
+@noindent
+Cela indente automatiquement la définition de @var{package} dans
+@file{gnu/packages/@var{file}.scm} en lançant Emacs en mode commande.  Pour
+indenter un fichier complet, n'indiquez pas de second argument :
+
+@example
+./etc/indent-code.el gnu/services/@var{file}.scm
+@end example
+
+@cindex Vim, édition de code Scheme
+Si vous éditez du code avec Vim, nous recommandons de lancer @code{:set
+autoindent} pour que votre code soit automatiquement indenté au moment où
+vous l'entrez.  En plus,
+@uref{https://www.vim.org/scripts/script.php?script_id=3998,
+@code{paredit.vim}} peut vous aider à gérer toutes ces parenthèses.
+
+Nous demandons que toutes les procédure de premier niveau contiennent une
+chaîne de documentation.  Ce prérequis peut être relâché pour les procédures
+privées simples dans l'espace de nom @code{(guix build @dots{})} cependant.
+
+Les procédures ne devraient pas avoir plus de quatre paramètres
+positionnés. Utilisez des paramètres par mot-clefs pour les procédures qui
+prennent plus de quatre paramètres.
+
+
+@node Envoyer des correctifs
+@section Envoyer des correctifs
+
+Development is done using the Git distributed version control system.  Thus,
+access to the repository is not strictly necessary.  We welcome
+contributions in the form of patches as produced by @code{git format-patch}
+sent to the @email{guix-patches@@gnu.org} mailing list.  Seasoned Guix
+developers may also want to look at the section on commit access
+(@pxref{Commit Access}).
+
+This mailing list is backed by a Debbugs instance, which allows us to keep
+track of submissions (@pxref{Tracking Bugs and Patches}).  Each message sent
+to that mailing list gets a new tracking number assigned; people can then
+follow up on the submission by sending email to
+@code{@var{NNN}@@debbugs.gnu.org}, where @var{NNN} is the tracking number
+(@pxref{Envoyer une série de correctifs}).
+
+Veuillez écrire les messages de commit dans le format ChangeLog
+(@pxref{Change Logs,,, standards, GNU Coding Standards}) ; vous pouvez
+regarder l'historique des commits pour trouver des exemples.
+
+Avant de soumettre un correctif qui ajoute ou modifie la définition d'un
+paquet, veuillez vérifier cette check-list :
+
+@enumerate
+@item
+Si les auteurs ou autrices du paquet logiciel fournissent une signature
+cryptographique pour l'archive, faites un effort pour vérifier
+l'authenticité de l'archive.  Pour un fichier de signature GPG détaché, cela
+se fait avec la commande @code{gpg --verify}.
+
+@item
+Prenez un peu de temps pour fournir un synopsis et une description adéquats
+pour le paquet.  Voir @xref{Synopsis et descriptions} pour quelques lignes
+directrices.
+
+@item
+Lancez @code{guix lint @var{paquet}}, où @var{paquet} est le nom du nouveau
+paquet ou du paquet modifié, et corrigez les erreurs qu'il rapporte
+(@pxref{Invoquer guix lint}).
+
+@item
+Assurez-vous que le paquet se construise sur votre plate-forme avec
+@code{guix build @var{paquet}}.
+
+@item
+Nous vous recommandons aussi d'essayer de construire le paquet sur les
+autres plate-formes prises en charge.  Comme vous n'avez pas forcément accès
+aux plate-formes matérielles, nous vous recommandons d'utiliser le
+@code{qemu-binfmt-service-type} pour les émuler.  Pour cela, ajoutez le
+service suivant à la liste des services dans votre configuration de système
+d'exploitation :
+
+@lisp
+(service qemu-binfmt-service-type
+ (qemu-binfmt-configuration
+   (platforms (lookup-qemu-platforms "arm" "aarch64"))
+   (guix-support? #t)))
+@end lisp
+
+Puis reconfigurez votre système.
+
+Vous pourrez ensuite construire les paquets pour différentes plate-formes en
+spécifiant l'option @code{--system}.  Par exemple pour construire le paquet
+« hello » pour les architectures armhf, aarch64 ou mips64, vous devrez
+lancer les commandes suivantes, respectivement :
+@example
+guix build --system=armhf-linux --rounds=2 hello
+guix build --system=aarch64-linux --rounds=2 hello
+@end example
+
+@item
+@cindex construction groupée
+Assurez-vous que le paquet n'utilise pas de copie groupée d'un logiciel déjà
+disponible dans un paquet séparé.
+
+Parfois, les paquets incluent des copie du code source de leurs dépendances
+pour le confort des utilisateur·rice·s.  Cependant, en tant que
+distribution, nous voulons nous assurer que ces paquets utilisent bien les
+copient que nous avons déjà dans la distribution si elles existent.  Cela
+améliore l'utilisation des ressources (la dépendance n'est construite et
+stockée qu'une seule fois) et permet à la distribution de faire des
+changements transversaux comme appliquer des correctifs de sécurité pour un
+paquet donné depuis un unique emplacement et qu'ils affectent tout le
+système, ce qu'empêchent les copies groupées.
+
+@item
+Regardez le profil rapporté par @command{guix size} (@pxref{Invoquer guix size}).  Cela vous permettra de remarquer des références à d'autres paquets
+qui ont été retenus sans que vous vous y attendiez.  Il peut aussi aider à
+déterminer s'il faut découper le paquet (@pxref{Des paquets avec plusieurs
+résultats}) et quelles dépendances facultatives utiliser.  En particulier,
+évitez d'ajouter @code{texlive} en dépendance : à cause de sa taille
+extrême, utilisez @code{texlive-tiny} ou @code{texlive-union} à la place.
+
+@item
+Pour les changements important, vérifiez que les paquets qui en dépendent
+(s'ils existent) ne sont pas affectés par le changement ; @code{guix refresh
+--list-dependant @var{paquet}} vous aidera (@pxref{Invoquer guix refresh}).
+
+@c See <https://lists.gnu.org/archive/html/guix-devel/2016-10/msg00933.html>.
+@cindex stratégie de branche
+@cindex stratégie de planification des reconstructions
+Suivant le nombre de paquets dépendants et donc le nombre de reconstruction
+induites, les commits vont vers des branches différentes, suivant ces
+principes :
+
+@table @asis
+@item 300 paquets dépendants ou moins
+branche @code{master} (changements non-disruptifs).
+
+@item entre 300 et 1 200 paquets dépendants
+branche @code{staging} (changements non-disruptifs).  Cette branche devrait
+être fusionnées dans @code{master} tous les 3 semaines.  Les changements par
+thèmes (par exemple une mise à jour de la pile GNOME) peuvent aller dans une
+branche spécifique (disons, @code{gnome-updates}).
+
+@item plus de 1 200 paquets dépendants
+branche @code{core-updates} (peut inclure des changements majeurs et
+potentiellement disruptifs).  Cette branche devrait être fusionnée dans
+@code{master} tous les 2,5 mois environ.
+@end table
+
+All these branches are @uref{@value{SUBSTITUTE-SERVER}, tracked by our build
+farm} and merged into @code{master} once everything has been successfully
+built.  This allows us to fix issues before they hit users, and to reduce
+the window during which pre-built binaries are not available.
+
+@c TODO: It would be good with badges on the website that tracks these
+@c branches.  Or maybe even a status page.
+Généralement les autres branches que @code{master} sont considérées comme
+@emph{gelées} s'il y a eu une évaluation récente ou qu'il y a une branche
+@code{-next} correspondante.  Demandez sur la liste de diffusion ou sur IRC
+si vous n'êtes pas sûr de savoir où pousser votre correctif.
+
+@item
+@cindex déterminisme, du processus de construction
+@cindex construction reproductibles, vérification
+Vérifiez si le processus de construction du paquet est déterministe.  Cela
+signifie typiquement vérifier qu'une construction indépendante du paquet
+renvoie exactement le même résultat que vous avez obtenu, bit à bit.
+
+Une manière simple de le faire est de reconstruire le paquet plusieurs fois
+à la suite sur votre machine (@pxref{Invoquer guix build}) :
+
+@example
+guix build --rounds=2 mon-paquet
+@end example
+
+Cela est suffisant pour trouver une classe de non-déterminisme commune,
+comme l'horodatage ou des sorties générées aléatoirement dans le résultat de
+la construction.
+
+Une autre option consiste à utiliser @command{guix challenge}
+(@pxref{Invoquer guix challenge}).  Vous pouvez lancer la commande une fois
+que les paquets ont été committés et construits par
+@code{@value{SUBSTITUTE-SERVER}} pour vérifier s'il obtient le même résultat
+que vous.  Mieux encore : trouvez une autre machine qui peut le construire
+et lancez @command{guix publish}.  Puisque la machine distante est sûrement
+différente de la vôtre, cela peut trouver des problèmes de non-déterminisme
+liés au matériel — par exemple utiliser une extension du jeu d'instruction —
+ou du noyau du système d'exploitation — par exemple se reposer sur
+@code{uname} ou les fichiers de @file{/proc}.
+
+@item
+Lorsque vous écrivez de la documentation, utilisez une formulation au genre
+neutre lorsque vous vous référez à des personnes, comme le
+@uref{https://fr.wikipedia.org/wiki/They_singulier, ``they''@comma{}
+``their''@comma{} ``them'' singulier} (en anglais).
+
+@item
+Vérifiez que votre correctif contienne seulement un ensemble de changements
+liés.  Grouper des changements non liés ensemble rend la revue plus
+difficile et plus lente.
+
+Ajouter plusieurs paquet ou une mise à jour d'un paquet avec des corrections
+dans ce paquet sont des exemples de changements sans rapport.
+
+@item
+Suivez nos règles de formatage de code, éventuellement en lançant le script
+@command{et/indent-code.el} pour le faire automatiquement (@pxref{Formatage
+du code}).
+
+@item
+Si possible, utilisez des miroirs dans l'URL des sources (@pxref{Invoquer guix download}).  Utilisez des URL stable, pas des URL générées.  Par
+exemple, les archives GitHub ne sont pas nécessairement identiques d'une
+génération à la suivante, donc il vaut mieux dans ce cas cloner le dépôt.
+N'utilisez pas le champ @command{name} dans l'URL : ce n'est pas très utile
+et si le nom change, l'URL sera probablement erronée.
+
+@item
+Check if Guix builds (@pxref{Construire depuis Git}) and address the warnings,
+especially those about use of undefined symbols.
+
+@item
+Make sure your changes do not break Guix and simulate a @code{guix pull}
+with:
+@example
+guix pull --url=/path/to/your/checkout --profile=/tmp/guix.master
+@end example
+
+@end enumerate
+
+When posting a patch to the mailing list, use @samp{[PATCH] @dots{}} as a
+subject, if your patch is to be applied on a branch other than
+@code{master}, say @code{core-updates}, specify it in the subject like
+@samp{[PATCH core-updates] @dots{}}.  You may use your email client or the
+@command{git send-email} command (@pxref{Envoyer une série de correctifs}).  We
+prefer to get patches in plain text messages, either inline or as MIME
+attachments.  You are advised to pay attention if your email client changes
+anything like line breaks or indentation which could potentially break the
+patches.
+
+Lorsqu'un bogue est résolu, veuillez fermer le fil en envoyant un courriel à
+@email{@var{NNN}-done@@debbugs.gnu.org}.
+
+@unnumberedsubsec Envoyer une série de correctifs
+@anchor{Envoyer une série de correctifs}
+@cindex série de correctifs
+@cindex @code{git send-email}
+@cindex @code{git-send-email}
+
+@c Debbugs bug: https://debbugs.gnu.org/db/15/15361.html
+When sending a patch series (e.g., using @code{git send-email}), please
+first send one message to @email{guix-patches@@gnu.org}, and then send
+subsequent patches to @email{@var{NNN}@@debbugs.gnu.org} to make sure they
+are kept together.  See @uref{https://debbugs.gnu.org/Advanced.html, the
+Debbugs documentation} for more information.  You can install @command{git
+send-email} with @command{guix install git:send-email}.
+
+@node Tracking Bugs and Patches
+@section Tracking Bugs and Patches
+
+@cindex bug reports, tracking
+@cindex patch submissions, tracking
+@cindex issue tracking
+@cindex Debbugs, issue tracking system
+Bug reports and patch submissions are currently tracked using the Debbugs
+instance at @uref{https://bugs.gnu.org}.  Bug reports are filed against the
+@code{guix} ``package'' (in Debbugs parlance), by sending email to
+@email{bug-guix@@gnu.org}, while patch submissions are filed against the
+@code{guix-patches} package by sending email to
+@email{guix-patches@@gnu.org} (@pxref{Envoyer des correctifs}).
+
+A web interface (actually @emph{two} web interfaces!) are available to
+browse issues:
+
+@itemize
+@item
+@url{https://bugs.gnu.org/guix} lists bug reports;
+@item
+@url{https://bugs.gnu.org/guix-patches} lists patch submissions.
+@end itemize
+
+You can also access both of these @i{via} the (nicer)
+@url{https://issues.guix.gnu.org} interface@footnote{The web interface at
+@url{https://issues.guix.gnu.org} is powered by Mumi, a nice piece of
+software written in Guile, and you can help! See
+@url{https://git.elephly.net/gitweb.cgi?p=software/mumi.git}.}.  To view
+discussions related to issue number @var{n}, go to
+@indicateurl{https://issues.guix.gnu.org/issue/@var{n}} or
+@indicateurl{https://bugs.gnu.org/@var{n}}.
+
+If you use Emacs, you may find it more convenient to interact with issues
+using @file{debbugs.el}, which you can install with:
+
+@example
+guix install emacs-debbugs
+@end example
+
+For example, to list all open issues on @code{guix-patches}, hit:
+
+@example
+@kbd{C-u} @kbd{M-x} debbugs-gnu @kbd{RET} @kbd{RET} guix-patches @kbd{RET} n y
+@end example
+
+@xref{Top,,, debbugs-ug, Debbugs User Guide}, for more information on this
+nifty tool!
+
+@node Commit Access
+@section Commit Access
+
+@cindex commit access, for developers
+For frequent contributors, having write access to the repository is
+convenient.  When you deem it necessary, consider applying for commit access
+by following these steps:
+
+@enumerate
+@item
+Find three committers who would vouch for you.  You can view the list of
+committers at
+@url{https://savannah.gnu.org/project/memberlist.php?group=guix}.  Each of
+them should email a statement to @email{guix-maintainers@@gnu.org} (a
+private alias for the collective of maintainers), signed with their OpenPGP
+key.
+
+Committers are expected to have had some interactions with you as a
+contributor and to be able to judge whether you are sufficiently familiar
+with the project's practices.  It is @emph{not} a judgment on the value of
+your work, so a refusal should rather be interpreted as ``let's try again
+later''.
+
+@item
+Send @email{guix-maintainers@@gnu.org} a message stating your intent,
+listing the three committers who support your application, signed with the
+OpenPGP key you will use to sign commits, and giving its fingerprint (see
+below).  See @uref{https://emailselfdefense.fsf.org/en/}, for an
+introduction to public-key cryptography with GnuPG.
+
+@c See <https://sha-mbles.github.io/>.
+Set up GnuPG such that it never uses the SHA1 hash algorithm for digital
+signatures, which is known to be unsafe since 2019, for instance by adding
+the following line to @file{~/.gnupg/gpg.conf} (@pxref{GPG Esoteric
+Options,,, gnupg, The GNU Privacy Guard Manual}):
+
+@example
+digest-algo sha512
+@end example
+
+@item
+Maintainers ultimately decide whether to grant you commit access, usually
+following your referrals' recommendation.
+
+@item
+@cindex OpenPGP, signed commits
+If and once you've been given access, please send a message to
+@email{guix-devel@@gnu.org} to say so, again signed with the OpenPGP key you
+will use to sign commits (do that before pushing your first commit).  That
+way, everyone can notice and ensure you control that OpenPGP key.
+
+@quotation Important
+Before you can push for the first time, maintainers must:
+
+@enumerate
+@item
+add your OpenPGP key to the @code{keyring} branch;
+@item
+add your OpenPGP fingerprint to the @file{.guix-authorizations} file of the
+branch(es) you will commit to.
+@end enumerate
+@end quotation
+
+@item
+Make sure to read the rest of this section and... profit!
+@end enumerate
+
+@quotation Remarque
+Maintainers are happy to give commit access to people who have been
+contributing for some time and have a track record---don't be shy and don't
+underestimate your work!
+
+However, note that the project is working towards a more automated patch
+review and merging system, which, as a consequence, may lead us to have
+fewer people with commit access to the main repository.  Stay tuned!
+@end quotation
+
+If you get commit access, please make sure to follow the policy below
+(discussions of the policy can take place on @email{guix-devel@@gnu.org}).
+
+Non-trivial patches should always be posted to @email{guix-patches@@gnu.org}
+(trivial patches include fixing typos, etc.).  This mailing list fills the
+patch-tracking database (@pxref{Tracking Bugs and Patches}).
+
+For patches that just add a new package, and a simple one, it's OK to
+commit, if you're confident (which means you successfully built it in a
+chroot setup, and have done a reasonable copyright and license auditing).
+Likewise for package upgrades, except upgrades that trigger a lot of
+rebuilds (for example, upgrading GnuTLS or GLib).  We have a mailing list
+for commit notifications (@email{guix-commits@@gnu.org}), so people can
+notice.  Before pushing your changes, make sure to run @code{git pull
+--rebase}.
+
+All commits that are pushed to the central repository on Savannah must be
+signed with an OpenPGP key, and the public key should be uploaded to your
+user account on Savannah and to public key servers, such as
+@code{keys.openpgp.org}.  To configure Git to automatically sign commits,
+run:
+
+@example
+git config commit.gpgsign true
+git config user.signingkey CABBA6EA1DC0FF33
+@end example
+
+You can prevent yourself from accidentally pushing unsigned commits to
+Savannah by using the pre-push Git hook called located at
+@file{etc/git/pre-push}:
+
+@example
+cp etc/git/pre-push .git/hooks/pre-push
+@end example
+
+When pushing a commit on behalf of somebody else, please add a
+@code{Signed-off-by} line at the end of the commit log message---e.g., with
+@command{git am --signoff}.  This improves tracking of who did what.
+
+When adding channel news entries (@pxref{Canaux, Writing Channel News}),
+make sure they are well-formed by running the following command right before
+pushing:
+
+@example
+make check-channel-news
+@end example
+
+For anything else, please post to @email{guix-patches@@gnu.org} and leave
+time for a review, without committing anything (@pxref{Envoyer des correctifs}).  If you didn’t receive any reply after two weeks, and if you're
+confident, it's OK to commit.
+
+That last part is subject to being adjusted, allowing individuals to commit
+directly on non-controversial changes on parts they’re familiar with.
+
+One last thing: the project keeps moving forward because committers not only
+push their own awesome changes, but also offer some of their time
+@emph{reviewing} and pushing other people's changes.  As a committer, you're
+welcome to use your expertise and commit rights to help other contributors,
+too!
